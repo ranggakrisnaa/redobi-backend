@@ -30,7 +30,8 @@
     "seed:create": "env-cmd ts-node ./node_modules/typeorm-extension/bin/cli.cjs seed:create",
     "prepare": "husky || true",
     "docs:dev": "vuepress dev docs",
-    "docs:build": "vuepress build docs"
+    "docs:build": "vuepress build docs",
+    "dbdocs:build": "dbdocs build ./src/database/dbdocs/database.dbml --project redobi"
   },
   "dependencies": {
     "@nestjs-modules/mailer": "^2.0.2",
