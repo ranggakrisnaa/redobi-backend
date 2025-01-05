@@ -1,9 +1,7 @@
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 import typescriptEslintPlugin from '@typescript-eslint/eslint-plugin';
 import prettierPlugin from 'eslint-plugin-prettier';
-import * as typescriptParser from '@typescript-eslint/parser';
-import jestPlugin from 'eslint-plugin-jest';
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
 
 // Correctly define __dirname for ES modules
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -26,7 +24,7 @@ export default [
         jest: 'readonly',
         process: 'readonly',
         console: 'readonly',
-        beforeAll: 'readonly'
+        beforeAll: 'readonly',
       },
     },
     plugins: {
