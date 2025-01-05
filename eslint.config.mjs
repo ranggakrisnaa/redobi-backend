@@ -2,6 +2,8 @@ import typescriptEslintPlugin from '@typescript-eslint/eslint-plugin';
 import prettierPlugin from 'eslint-plugin-prettier';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
+import * as typescriptParser from '@typescript-eslint/parser';
+import jestPlugin from 'eslint-plugin-jest';
 
 // Correctly define __dirname for ES modules
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -52,6 +54,7 @@ export default [
         },
       ],
     },
+    ignorePatterns: ['**/*.config.js', '**/docs/**'], // Example of ignoring specific files or folders
   },
   {
     files: ['**/*.ts', '**/*.tsx'],
