@@ -8,7 +8,6 @@ import { LoginResDto } from './dto/login.res.dto';
 import { RefreshReqDto } from './dto/refresh.req.dto';
 import { RefreshResDto } from './dto/refresh.res.dto';
 import { RegisterReqDto } from './dto/register.req.dto';
-import { RegisterResDto } from './dto/register.res.dto';
 import { JwtPayloadType } from './types/jwt-payload.type';
 
 @ApiTags('auth')
@@ -24,23 +23,22 @@ export class AuthController {
     summary: 'Sign in',
   })
   @Post('email/login')
-  async signIn(@Body() userLogin: LoginReqDto): Promise<LoginResDto> {
-    return await this.authService.signIn(userLogin);
+  async signIn(@Body() reqLoginDto: LoginReqDto) {
+    await this.authService.signIn(reqLoginDto);
+    return;
   }
 
   @ApiPublic()
   @Post('email/register')
-  async register(@Body() dto: RegisterReqDto): Promise<RegisterResDto> {
-    return await this.authService.register(dto);
+  async register(@Body() reqLoginDto: RegisterReqDto) {
+    await this.authService.register(reqLoginDto);
+    return;
   }
 
-  @ApiAuth({
-    summary: 'Logout',
-    errorResponses: [400, 401, 403, 500],
-  })
+  @ApiAuth()
   @Post('logout')
-  async logout(@CurrentUser() userToken: JwtPayloadType): Promise<void> {
-    await this.authService.logout(userToken);
+  async logout(@CurrentUser() userToken: JwtPayloadType) {
+    return '';
   }
 
   @ApiPublic({
@@ -48,8 +46,8 @@ export class AuthController {
     summary: 'Refresh token',
   })
   @Post('refresh')
-  async refresh(@Body() dto: RefreshReqDto): Promise<RefreshResDto> {
-    return await this.authService.refreshToken(dto);
+  async refresh(@Body() dto: RefreshReqDto) {
+    return '';
   }
 
   @ApiPublic()

@@ -1,45 +1,73 @@
-import eslint from '@eslint/js';
-import prettierRecommended from 'eslint-plugin-prettier';
-import tsEslint from '@typescript-eslint/eslint-plugin';
-import tsParser from '@typescript-eslint/parser';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import typescriptEslintPlugin from '@typescript-eslint/eslint-plugin';
+import prettierPlugin from 'eslint-plugin-prettier';
+import * as typescriptParser from '@typescript-eslint/parser';
+import jestPlugin from 'eslint-plugin-jest';
 
-export default {
-  root: true,
-  parser: tsParser,
-  plugins: ['@typescript-eslint', 'prettier'],
-  extends: [
-    'eslint:recommended',
-    'plugin:@typescript-eslint/recommended',
-    'plugin:prettier/recommended',
-  ],
-  parserOptions: {
-    project: './tsconfig.json',
-    tsconfigRootDir: import.meta.dirname,
-    sourceType: 'module',
-  },
-  ignorePatterns: [
-    'eslint.config.mjs',
-    'docs/.vuepress/**/*',
-    'src/generated/i18n.generated.ts',
-  ],
-  rules: {
-    '@typescript-eslint/interface-name-prefix': 'off',
-    '@typescript-eslint/explicit-function-return-type': 'off',
-    '@typescript-eslint/explicit-module-boundary-types': 'off',
-    '@typescript-eslint/no-explicit-any': 'off',
-    '@typescript-eslint/no-unused-vars': [
-      'warn',
-      {
-        argsIgnorePattern: '^_',
-        varsIgnorePattern: '^_',
-        caughtErrorsIgnorePattern: '^_',
+// Correctly define __dirname for ES modules
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+export default [
+  {
+    languageOptions: {
+      parser: typescriptParser,
+      parserOptions: {
+        project: './tsconfig.json',
+        tsconfigRootDir: __dirname, // Use __dirname here
+        sourceType: 'module',
       },
-    ],
-    'prettier/prettier': [
-      'error',
-      {
-        endOfLine: 'auto',
+      globals: {
+        describe: 'readonly',
+        it: 'readonly',
+        beforeEach: 'readonly',
+        afterEach: 'readonly',
+        expect: 'readonly',
+        jest: 'readonly',
+        process: 'readonly',
+        console: 'readonly',
+        beforeAll: 'readonly'
       },
-    ],
+    },
+    plugins: {
+      '@typescript-eslint': typescriptEslintPlugin,
+      prettier: prettierPlugin,
+      jest: jestPlugin,
+    },
+    rules: {
+      '@typescript-eslint/interface-name-prefix': 'off',
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/explicit-module-boundary-types': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
+      'prettier/prettier': [
+        'error',
+        {
+          endOfLine: 'auto',
+        },
+      ],
+    },
   },
-};
+  {
+    files: ['**/*.ts', '**/*.tsx'],
+    rules: {
+      'no-unused-vars': 'warn',
+      'no-undef': 'error',
+      'no-console': 'warn',
+      '@typescript-eslint/no-unused-vars': 'warn',
+      'prettier/prettier': [
+        'error',
+        {
+          endOfLine: 'auto',
+        },
+      ],
+    },
+  },
+];
