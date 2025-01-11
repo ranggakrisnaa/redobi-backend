@@ -83,10 +83,12 @@ function generateModulesSet() {
           infer: true,
         }),
         loaderOptions: {
+          // eslint-disable-next-line no-undef
           path: path.join(__dirname, '/../i18n/'),
           watch: isLocal,
         },
         typesOutputPath: path.join(
+          // eslint-disable-next-line no-undef
           __dirname,
           '../../src/generated/i18n.generated.ts',
         ),

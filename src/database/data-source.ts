@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 import 'reflect-metadata';
 import { DataSource, DataSourceOptions } from 'typeorm';
 import { SeederOptions } from 'typeorm-extension';
