@@ -1,5 +1,5 @@
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
-REGEX="^(feature|feat|chore|fix|bugfix|hotfix|docs|refactor|test|build|perf|style|ci|release|merge)\.([a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*)$"
+REGEX="^(feature|feat|chore|fix|bugfix|hotfix|docs|refactor|test|build|perf|style|ci|release|merge)\/([a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*)$"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
