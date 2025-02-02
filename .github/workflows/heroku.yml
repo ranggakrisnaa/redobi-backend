@@ -69,6 +69,9 @@ jobs:
         continue-on-error: true
         run: git pull --rebase heroku main
 
+      - name: Unshallow Git Repository
+        run: git fetch --prune --unshallow
+
       - name: Push to Heroku
         env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
