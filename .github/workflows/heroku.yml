@@ -68,9 +68,9 @@ jobs:
       - name: Set Git Remote
         run: git remote add heroku https://git.heroku.com/${{ secrets.HEROKU_APP_NAME }}.git
 
-      - name: Pull from Heroku to avoid conflicts
-        continue-on-error: true
-        run: git pull --rebase heroku main
+      # - name: Pull from Heroku to avoid conflicts
+      #   continue-on-error: true
+      #   run: git pull --rebase heroku main
 
       - name: Unshallow Git Repository
         run: git fetch --prune --unshallow
@@ -82,6 +82,6 @@ jobs:
           git remote set-url heroku https://heroku:${{ secrets.HEROKU_API_KEY }}@git.heroku.com/${{ secrets.HEROKU_APP_NAME }}.git
           git push heroku main --force
 
-      - name: Run Database Migrations on Heroku
+      - name: Run Database Migrations
         run: |
-          heroku ps:exec --app ${{ secrets.HEROKU_APP_NAME }} -- pnpm migration:up
+          heroku run pnpm migration:up --app ${{ secrets.HEROKU_APP_NAME }}
