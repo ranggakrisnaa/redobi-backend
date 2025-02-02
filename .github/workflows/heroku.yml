@@ -55,6 +55,3 @@ jobs:
         env:
           HUSKY: 0
           HD_COMMIT_MESSAGE: 'chore(deploy): deploy to heroku'
-        run: |
-          heroku git:remote -a $HEROKU_APP_NAME
-          git push heroku main:main --force
