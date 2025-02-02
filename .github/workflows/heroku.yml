@@ -70,4 +70,8 @@ jobs:
         run: git pull --rebase heroku main
 
       - name: Push to Heroku
-        run: git push heroku main:main --force
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: |
+          git remote set-url heroku https://heroku:${{ secrets.HEROKU_API_KEY }}@git.heroku.com/${{ secrets.HEROKU_APP_NAME }}.git
+          git push heroku main --force
