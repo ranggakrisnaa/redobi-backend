@@ -16,32 +16,30 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Cache dependencies
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm dependencies
         uses: actions/cache@v3
         with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-node-
+            ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
-
-      - name: Run tests
-        run: |
-          if [ -f "package.json" ] && grep -q "\"test\"" "package.json"; then
-            npm test
-          else
-            echo "No test script found, skipping tests"
-          fi
+        run: pnpm install
 
       - name: Build application
-        run: npm run build
+        run: pnpm run build
 
       - name: Deploy to Heroku
         uses: akhileshns/heroku-deploy@v3.12.14
@@ -49,3 +47,4 @@ jobs:
           heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
           heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
           heroku_email: ${{ secrets.HEROKU_EMAIL }}
+          buildpack: https://github.com/heroku/heroku-buildpack-nodejs.git
