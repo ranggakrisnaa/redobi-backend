@@ -48,3 +48,6 @@ jobs:
           heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
           heroku_email: ${{ secrets.HEROKU_EMAIL }}
           buildpack: https://github.com/heroku/heroku-buildpack-nodejs.git
+        env:
+          HUSKY: 0
+          HD_COMMIT_MESSAGE: 'chore(deploy): deploy to heroku'
