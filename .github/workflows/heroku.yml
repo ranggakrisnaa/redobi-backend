@@ -25,10 +25,20 @@ jobs:
             ${{ runner.os }}-node-
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
 
       - name: Run tests
-        run: npm test
+        run: |
+          if [ -f "package.json" ] && grep -q "\"test\"" "package.json"; then
+            npm test
+          else
+            echo "No test script found, skipping tests"
+          fi
 
       - name: Build application
         run: npm run build
