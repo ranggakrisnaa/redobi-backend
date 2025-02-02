@@ -50,6 +50,9 @@ jobs:
       #       echo "No test script found, skipping tests"
       #     fi
 
+      - name: Install env-cmd
+        run: pnpm add -g env-cmd
+
       - name: Build application
         run: pnpm run build
 
