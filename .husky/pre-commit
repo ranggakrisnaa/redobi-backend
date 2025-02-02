@@ -10,5 +10,5 @@
 #   echo "Please rename your branch with '(feature|feat|chore|fix|bugfix|hotfix|docs|refactor|test|build|perf|style|ci|release|merge)(.<ticket>?).<subject-example>' syntax${NC}"
 #   exit 1
 # fi
-
+[ -n "$CI" ] && exit 0
 pnpm lint-staged
