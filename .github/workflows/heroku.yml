@@ -82,6 +82,6 @@ jobs:
           git remote set-url heroku https://heroku:${{ secrets.HEROKU_API_KEY }}@git.heroku.com/${{ secrets.HEROKU_APP_NAME }}.git
           git push heroku main --force
 
-      - name: Run Database Migrations
+      - name: Run Database Migrations on Heroku
         run: |
-          heroku run pnpm migration:up --app ${{ secrets.HEROKU_APP_NAME }}
+          heroku ps:exec --app ${{ secrets.HEROKU_APP_NAME }} -- pnpm migration:up
