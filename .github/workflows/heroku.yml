@@ -41,6 +41,10 @@ jobs:
       - name: Build application
         run: pnpm run build
 
+      - name: Install Heroku CLI
+        run: |
+          curl https://cli-assets.heroku.com/install.sh | sh
+
       - name: Deploy to Heroku
         uses: akhileshns/heroku-deploy@v3.12.14
         with:
@@ -51,3 +55,6 @@ jobs:
         env:
           HUSKY: 0
           HD_COMMIT_MESSAGE: 'chore(deploy): deploy to heroku'
+        run: |
+          heroku git:remote -a $HEROKU_APP_NAME
+          git push heroku main:main --force
