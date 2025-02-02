@@ -54,4 +54,3 @@ jobs:
           buildpack: https://github.com/heroku/heroku-buildpack-nodejs.git
         env:
           HUSKY: 0
-          HD_COMMIT_MESSAGE: 'chore(deploy): deploy to heroku'
