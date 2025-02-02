@@ -70,4 +70,4 @@ jobs:
         run: git pull --rebase heroku main
 
       - name: Push to Heroku
-        run: git push heroku main --force
+        run: git push heroku main:main --force
