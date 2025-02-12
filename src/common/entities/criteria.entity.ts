@@ -37,7 +37,7 @@ export class CriteriaEntity extends AbstractEntity {
   @Column({ type: 'enum', enum: CriteriaTypeEnum })
   type: CriteriaTypeEnum;
 
-  @Column({ type: 'integer', name: 'sub_criteria_id' })
+  @Column({ type: 'int', name: 'sub_criteria_id' })
   subCriteriaId: number;
 
   @JoinColumn({

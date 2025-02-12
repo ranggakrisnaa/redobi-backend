@@ -1,4 +1,3 @@
-/* eslint-disable no-undef */
 import TypeOrmCustomLogger from '@/utils/typeorm-custom-logger';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -29,7 +28,7 @@ export class TypeOrmConfigService implements TypeOrmOptionsFactory {
           ? ['error', 'warn', 'query', 'schema']
           : ['error', 'warn'],
       ),
-      entities: [__dirname + '/entity/**/*{.ts,.js}'],
+      entities: [__dirname + '/../common/entities/**/*{.ts,.js}'],
       migrations: [__dirname + '/migrations/**/*{.ts,.js}'],
       migrationsTableName: 'migrations',
       poolSize: this.configService.get('database.maxConnections', {

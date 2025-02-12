@@ -31,7 +31,7 @@ export class StudentEntity extends AbstractEntity implements IStudent {
   @Column({ type: 'varchar', length: 200 })
   nim: string;
 
-  @Column({ type: 'int4', name: 'tahun_masuk' })
+  @Column({ type: 'int', name: 'tahun_masuk' })
   tahunMasuk: number;
 
   @Column({ type: 'enum', enum: MajorEnum })
@@ -60,7 +60,7 @@ export class StudentEntity extends AbstractEntity implements IStudent {
     referencedColumnName: 'id',
     foreignKeyConstraintName: 'FK_students_users',
   })
-  @ManyToOne(() => UserEntity, (user) => user.lecturer)
+  @ManyToOne(() => UserEntity, (user) => user.student)
   user!: IUser;
 
   @OneToMany(() => SelectionEntity, (selection) => selection.student)
