@@ -5,6 +5,7 @@ import { AuthService } from './auth.service';
 import { LoginReqDto } from './dto/login.req.dto';
 import { LoginResDto } from './dto/login.res.dto';
 import { RefreshResDto } from './dto/refresh.res.dto';
+import { VerifyLoginReqDto } from './dto/verify-login.req.dto';
 
 @ApiTags('auth')
 @Controller({
@@ -18,10 +19,18 @@ export class AuthController {
     type: LoginResDto,
     summary: 'Sign in',
   })
-  @Post('email/login')
+  @Post('/login')
   async signIn(@Body() reqLoginDto: LoginReqDto) {
-    await this.authService.signIn(reqLoginDto);
-    return;
+    return await this.authService.signIn(reqLoginDto);
+  }
+
+  @ApiPublic({
+    type: VerifyLoginReqDto,
+    summary: 'Verify Sign in',
+  })
+  @Post('/verify-login')
+  async verifySignIn(@Body() reqVerifyLoginDto: VerifyLoginReqDto) {
+    return await this.authService.verifySignIn(reqVerifyLoginDto);
   }
 
   @ApiAuth()

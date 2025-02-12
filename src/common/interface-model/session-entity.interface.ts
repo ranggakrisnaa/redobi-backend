@@ -8,5 +8,7 @@ export interface ISession extends IBaseEntity {
   otpCode: number;
   otpTrial: number;
   isLimit: boolean;
+  lockedUntil: Date;
+  userId: Uuid;
   user?: IUser;
 }

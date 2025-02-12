@@ -27,7 +27,6 @@ import { MailService } from './mail.service';
           from: `"${config.get('mail.defaultName', { infer: true })}" <${config.get('mail.defaultEmail', { infer: true })}>`,
         },
         template: {
-          // eslint-disable-next-line no-undef
           dir: join(__dirname, 'templates'),
           adapter: new HandlebarsAdapter(),
           options: {

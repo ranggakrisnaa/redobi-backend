@@ -17,6 +17,7 @@ export class SuccessResponseFilter<T> implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
     const method = request.method;
     const statusCode = response.statusCode || HttpStatus.OK;
+    console.log(exception);
 
     let customMessage: string;
     switch (method) {

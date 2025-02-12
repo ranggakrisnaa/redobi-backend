@@ -27,7 +27,7 @@ export class LecturerEntity extends AbstractEntity {
   @Column({ type: 'varchar', length: 200, name: 'full_name' })
   fullName: string;
 
-  @Column({ type: 'int4', name: 'jumlah_bimbingan' })
+  @Column({ type: 'int', name: 'jumlah_bimbingan' })
   jumlahBimbingan: number;
 
   @Column({ type: 'enum', enum: TipePembimbingEnum, name: 'tipe_pembimbing' })

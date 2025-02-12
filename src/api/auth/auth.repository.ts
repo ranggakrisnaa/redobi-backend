@@ -13,13 +13,11 @@ export class AuthRepository extends Repository<UserEntity> {
     super(repo.target, repo.manager, repo.queryRunner);
   }
 
-  async pagination() {}
-
   async findOneByEmailOrUsername(
     emailOrUsername: string,
     relations?: string[],
   ): Promise<IUser> {
-    return this.repo.findOneOrFail({
+    return await this.repo.findOneOrFail({
       where: [{ email: emailOrUsername }, { username: emailOrUsername }],
       relations: relations,
     });
