@@ -1,6 +1,6 @@
 import { SuccessDto } from '@/common/dto/success.dto';
-import { CustomSuccessResponseEnum } from '@/common/enums/custom-success-response.enum.';
-import { RequestMethodEnum } from '@/common/enums/request-method.enum';
+import { CustomSuccessResponseEnum } from '@/database/enums/custom-success-response.enum.';
+import { RequestMethodEnum } from '@/database/enums/request-method.enum';
 import {
   ArgumentsHost,
   Catch,

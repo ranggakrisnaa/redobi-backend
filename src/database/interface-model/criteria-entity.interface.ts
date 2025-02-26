@@ -1,4 +1,4 @@
-import { CriteriaTypeEnum } from '../enums/criteria-type.enum';
+import { CriteriaTypeEnum } from '../../database/enums/criteria-type.enum';
 import { IBaseEntity } from './base-entity.interface';
 import { ISubCriteria } from './sub-criteria-entity.entity';
 

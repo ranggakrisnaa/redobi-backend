@@ -1,13 +1,18 @@
-import { INITIAL_VALUE } from '@/common/constant/nullable.constant';
 import { UserEntity } from '@/common/entities/user.entity';
-import { OtpTrialStatus } from '@/common/enums/otp-trial-status.enum';
 import { IEmailJob } from '@/common/interfaces/job.interface';
 import { AllConfigType } from '@/config/config.type';
+import { INITIAL_VALUE } from '@/constants/app.constant';
 import { QueueName } from '@/constants/job.constant';
+import { OtpTrialStatus } from '@/database/enums/otp-trial-status.enum';
 import { verifyPassword } from '@/utils/password.util';
 import { InjectQueue } from '@nestjs/bullmq';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -81,7 +86,8 @@ export class AuthService {
       return { id: foundUser.id, otpCode };
     } catch (err: unknown) {
       await queryRunner.rollbackTransaction();
-      if (err instanceof Error) throw err.message;
+      if (err instanceof Error)
+        throw new InternalServerErrorException(err.message);
     } finally {
       await queryRunner.release();
     }
@@ -90,7 +96,6 @@ export class AuthService {
   async verifySignIn(reqBody: VerifyLoginReqDto): Promise<Token> {
     const now = new Date();
 
-    // Find existing session
     const foundSession = await this.sessionRepository.findOne({
       where: {
         userId: reqBody.userId as Uuid,
@@ -101,60 +106,57 @@ export class AuthService {
       throw new UnauthorizedException('Session not found');
     }
 
-    // Check if account is locked
     if (foundSession.isLimit) {
       throw new UnauthorizedException('Account temporarily locked');
     }
 
-    // OTP verification
-    if (foundSession.otpCode !== reqBody.otpCode) {
-      // Increment trial count
-      const updatedTrialCount = foundSession.otpTrial + 1;
+    try {
+      if (foundSession.otpCode !== reqBody.otpCode) {
+        const updatedTrialCount = foundSession.otpTrial + 1;
 
-      // Check time since last attempt
-      const lastAttemptDiff = this.getMinutesSinceLastAttempt(
-        foundSession.updatedAt,
-        now,
-      );
+        const lastAttemptDiff = this.getMinutesSinceLastAttempt(
+          foundSession.updatedAt,
+          now,
+        );
 
-      // Implement trial logic
-      if (updatedTrialCount >= OtpTrialStatus.MAX_TRIALS) {
-        await this.lockAccount(foundSession.id);
-        throw new UnauthorizedException('Maximum OTP attempts exceeded');
+        if (updatedTrialCount >= OtpTrialStatus.MAX_TRIALS) {
+          await this.lockAccount(foundSession.id);
+          throw new UnauthorizedException('Maximum OTP attempts exceeded');
+        }
+
+        if (
+          updatedTrialCount > OtpTrialStatus.FIRST_RETRY &&
+          lastAttemptDiff < 1
+        ) {
+          throw new UnauthorizedException('Please wait before retrying');
+        }
+
+        await this.sessionRepository.update(foundSession.id, {
+          otpTrial: updatedTrialCount,
+          updatedAt: now,
+        });
+
+        throw new UnauthorizedException('Invalid OTP');
       }
 
-      if (
-        updatedTrialCount > OtpTrialStatus.FIRST_RETRY &&
-        lastAttemptDiff < 1
-      ) {
-        throw new UnauthorizedException('Please wait before retrying');
-      }
-
-      // Update trial count
-      await this.sessionRepository.update(foundSession.id, {
-        otpTrial: updatedTrialCount,
-        updatedAt: now,
+      const token = await this.createToken({
+        id: reqBody.userId,
+        sessionId: foundSession.id,
+        hash: foundSession.hashToken,
       });
 
-      throw new UnauthorizedException('Invalid OTP');
+      await this.sessionRepository.update(foundSession.id, {
+        otpTrial: 0,
+        isLimit: false,
+        updatedAt: now,
+        hashToken: token.accessToken,
+      });
+
+      return token;
+    } catch (err: unknown) {
+      if (err instanceof Error)
+        throw new InternalServerErrorException(err.message);
     }
-
-    // Generate authentication token
-    const token = await this.createToken({
-      id: reqBody.userId,
-      sessionId: foundSession.id,
-      hash: foundSession.hashToken,
-    });
-
-    // Reset trial count on successful verification
-    await this.sessionRepository.update(foundSession.id, {
-      otpTrial: 0,
-      isLimit: false,
-      updatedAt: now,
-      hashToken: token.accessToken,
-    });
-
-    return token;
   }
 
   private getMinutesSinceLastAttempt(

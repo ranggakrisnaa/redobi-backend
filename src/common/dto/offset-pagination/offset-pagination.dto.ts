@@ -1,3 +1,4 @@
+import { OrderDirectionType } from '@/common/enums/sort.enum';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 import { PageOptionsDto } from './page-options.dto';
@@ -39,5 +40,9 @@ export class OffsetPaginationDto {
     this.totalRecords = totalRecords;
     this.totalPages =
       this.limit > 0 ? Math.ceil(totalRecords / pageOptions.limit) : 0;
+  }
+
+  getOrder(order?: OrderDirectionType): OrderDirectionType {
+    return ['ASC', 'DESC'].indexOf(order || 'DESC') == 0 ? 'ASC' : 'DESC';
   }
 }

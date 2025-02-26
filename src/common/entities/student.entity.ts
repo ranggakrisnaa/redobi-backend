@@ -7,8 +7,8 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { ClassEnum } from '../enums/class.enum';
-import { MajorEnum } from '../enums/major.enum';
+import { ClassEnum } from '../../database/enums/class.enum';
+import { MajorEnum } from '../../database/enums/major.enum';
 import { IReccomendation } from '../interface-model/reccomendation-entity.interface';
 import { ISelection } from '../interface-model/selection-entity.interface';
 import { IStudent } from '../interface-model/student-entity.interface';

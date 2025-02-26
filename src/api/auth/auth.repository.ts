@@ -1,5 +1,5 @@
 import { UserEntity } from '@/common/entities/user.entity';
-import { IUser } from '@/common/interface-model/user-entity.interface';
+import { IUser } from '@/database/interface-model/user-entity.interface';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';

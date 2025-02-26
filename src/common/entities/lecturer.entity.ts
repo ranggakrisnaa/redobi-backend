@@ -8,7 +8,7 @@ import {
   PrimaryGeneratedColumn,
   Relation,
 } from 'typeorm';
-import { TipePembimbingEnum } from '../enums/tipe-pembimbing.enum';
+import { TipePembimbingEnum } from '../../database/enums/tipe-pembimbing.enum';
 import { IAssessment } from '../interface-model/assessment-entity.interface';
 import { IReccomendation } from '../interface-model/reccomendation-entity.interface';
 import { Uuid } from '../types/common.type';
