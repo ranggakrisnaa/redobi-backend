@@ -1,4 +1,4 @@
-import { ThesisKeywordCategoryEnum } from '../enums/thesis-keyword-category.enum';
+import { ThesisKeywordCategoryEnum } from '../../database/enums/thesis-keyword-category.enum';
 import { IBaseEntity } from './base-entity.interface';
 import { IKeyword } from './keyword-entity.interface';
 

@@ -1,18 +1,26 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class CreateKeywordsTable1735966304061 implements MigrationInterface {
-  name = 'CreateKeywordsTable1735966304061';
+export class CreatethesisKeywordsTable1739083547508
+  implements MigrationInterface
+{
+  name = 'CreatethesisKeywordsTable1739083547508';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
-            CREATE TABLE "keywords" (
+            CREATE TYPE "public"."thesis_keywords_category_enum" AS ENUM(
+                'Sistem Cerdas',
+                'Rekayasa Perangkat Lunak',
+                'Multimedia'
+            )
+        `);
+    await queryRunner.query(`
+            CREATE TABLE "thesis_keywords" (
                 "id" SERIAL NOT NULL,
-                "name" character varying(200) NOT NULL,
-                "thesis_keyword_id" integer NOT NULL,
+                "category" "public"."thesis_keywords_category_enum" NOT NULL,
                 "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
                 "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
                 "deleted_at" TIMESTAMP WITH TIME ZONE,
-                CONSTRAINT "PK_keyword_id" PRIMARY KEY ("id")
+                CONSTRAINT "PK_thesis_keyword_id" PRIMARY KEY ("id")
             )
         `);
     await queryRunner.query(`
@@ -26,7 +34,10 @@ export class CreateKeywordsTable1735966304061 implements MigrationInterface {
             ALTER TABLE "keywords" DROP CONSTRAINT "FK_keyword_thesis_keywords"
         `);
     await queryRunner.query(`
-            DROP TABLE "keywords"
+            DROP TABLE "thesis_keywords"
+        `);
+    await queryRunner.query(`
+            DROP TYPE "public"."thesis_keywords_category_enum"
         `);
   }
 }

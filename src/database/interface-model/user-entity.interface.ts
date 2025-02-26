@@ -1,4 +1,4 @@
-import { Uuid } from '../types/common.type';
+import { Uuid } from '@/common/types/common.type';
 import { IBaseEntity } from './base-entity.interface';
 import { ILecturer } from './lecturer-entity.interface';
 import { ISession } from './session-entity.interface';

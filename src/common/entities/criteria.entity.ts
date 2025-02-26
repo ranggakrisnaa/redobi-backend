@@ -7,7 +7,7 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { CriteriaTypeEnum } from '../enums/criteria-type.enum';
+import { CriteriaTypeEnum } from '../../database/enums/criteria-type.enum';
 import { IAssessment } from '../interface-model/assessment-entity.interface';
 import { ISubCriteria } from '../interface-model/sub-criteria-entity.entity';
 import { AssessmentEntity } from './assesment.entity';
@@ -37,7 +37,7 @@ export class CriteriaEntity extends AbstractEntity {
   @Column({ type: 'enum', enum: CriteriaTypeEnum })
   type: CriteriaTypeEnum;
 
-  @Column({ type: 'integer', name: 'sub_criteria_id' })
+  @Column({ type: 'int', name: 'sub_criteria_id' })
   subCriteriaId: number;
 
   @JoinColumn({

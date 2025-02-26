@@ -1,6 +1,6 @@
 import { AbstractEntity } from '@/database/entities/abstract.entity';
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { ThesisKeywordCategoryEnum } from '../enums/thesis-keyword-category.enum';
+import { ThesisKeywordCategoryEnum } from '../../database/enums/thesis-keyword-category.enum';
 import { IKeyword } from '../interface-model/keyword-entity.interface';
 import { KeywordsEntity } from './keyword.entity';
 

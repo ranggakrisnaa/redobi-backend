@@ -8,7 +8,7 @@ import {
   PrimaryGeneratedColumn,
   Relation,
 } from 'typeorm';
-import { TipePembimbingEnum } from '../enums/tipe-pembimbing.enum';
+import { TipePembimbingEnum } from '../../database/enums/tipe-pembimbing.enum';
 import { IAssessment } from '../interface-model/assessment-entity.interface';
 import { IReccomendation } from '../interface-model/reccomendation-entity.interface';
 import { Uuid } from '../types/common.type';
@@ -27,7 +27,7 @@ export class LecturerEntity extends AbstractEntity {
   @Column({ type: 'varchar', length: 200, name: 'full_name' })
   fullName: string;
 
-  @Column({ type: 'int4', name: 'jumlah_bimbingan' })
+  @Column({ type: 'int', name: 'jumlah_bimbingan' })
   jumlahBimbingan: number;
 
   @Column({ type: 'enum', enum: TipePembimbingEnum, name: 'tipe_pembimbing' })

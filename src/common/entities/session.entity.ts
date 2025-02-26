@@ -21,14 +21,21 @@ export class SessionEntity extends AbstractEntity implements ISession {
   @Column({ type: 'varchar', length: 255, name: 'hash_token' })
   hashToken: string;
 
-  @Column({ type: 'int4', name: 'otp_code' })
+  @Column({ type: 'int', name: 'otp_code' })
   otpCode: number;
 
-  @Column({ type: 'int4', name: 'otp_trial' })
+  @Column({ type: 'int', name: 'otp_trial' })
   otpTrial: number;
 
   @Column({ type: 'bool', name: 'is_limit', default: false })
   isLimit: boolean;
+
+  @Column({
+    name: 'locked_until',
+    type: 'timestamptz',
+    nullable: true,
+  })
+  lockedUntil: Date;
 
   @Column({
     name: 'user_id',

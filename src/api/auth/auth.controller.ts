@@ -1,10 +1,10 @@
 import { ApiAuth, ApiPublic } from '@/decorators/http.decorators';
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Post } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginReqDto } from './dto/login.req.dto';
 import { LoginResDto } from './dto/login.res.dto';
-import { RefreshResDto } from './dto/refresh.res.dto';
+import { VerifyLoginReqDto } from './dto/verify-login.req.dto';
 
 @ApiTags('auth')
 @Controller({
@@ -18,54 +18,23 @@ export class AuthController {
     type: LoginResDto,
     summary: 'Sign in',
   })
-  @Post('email/login')
-  async signIn(@Body() reqLoginDto: LoginReqDto) {
-    await this.authService.signIn(reqLoginDto);
-    return;
+  @Post('/login')
+  async signIn(@Body() req: LoginReqDto) {
+    return await this.authService.signIn(req);
+  }
+
+  @ApiPublic({
+    type: VerifyLoginReqDto,
+    summary: 'Verify Sign in',
+  })
+  @Post('/verify-login')
+  async verifySignIn(@Body() req: VerifyLoginReqDto) {
+    return await this.authService.verifySignIn(req);
   }
 
   @ApiAuth()
   @Post('logout')
   async logout() {
     return '';
-  }
-
-  @ApiPublic({
-    type: RefreshResDto,
-    summary: 'Refresh token',
-  })
-  @Post('refresh')
-  async refresh() {
-    return '';
-  }
-
-  @ApiPublic()
-  @Post('forgot-password')
-  async forgotPassword() {
-    return 'forgot-password';
-  }
-
-  @ApiPublic()
-  @Post('verify/forgot-password')
-  async verifyForgotPassword() {
-    return 'verify-forgot-password';
-  }
-
-  @ApiPublic()
-  @Post('reset-password')
-  async resetPassword() {
-    return 'reset-password';
-  }
-
-  @ApiPublic()
-  @Get('verify/email')
-  async verifyEmail() {
-    return 'verify-email';
-  }
-
-  @ApiPublic()
-  @Post('verify/email/resend')
-  async resendVerifyEmail() {
-    return 'resend-verify-email';
   }
 }

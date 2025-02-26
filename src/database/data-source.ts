@@ -1,4 +1,14 @@
-/* eslint-disable no-undef */
+import { AssessmentEntity } from '@/common/entities/assesment.entity';
+import { CriteriaEntity } from '@/common/entities/criteria.entity';
+import { KeywordsEntity } from '@/common/entities/keyword.entity';
+import { LecturerEntity } from '@/common/entities/lecturer.entity';
+import { ReccomendationEntity } from '@/common/entities/reccomendation.entity';
+import { SelectionEntity } from '@/common/entities/selection.entity';
+import { SessionEntity } from '@/common/entities/session.entity';
+import { StudentEntity } from '@/common/entities/student.entity';
+import { SubCriteriaEntity } from '@/common/entities/sub-criteria.entity';
+import { ThesisKeywordsEntity } from '@/common/entities/thesis_keyword.entity';
+import { UserEntity } from '@/common/entities/user.entity';
 import 'reflect-metadata';
 import { DataSource, DataSourceOptions } from 'typeorm';
 import { SeederOptions } from 'typeorm-extension';
@@ -17,7 +27,20 @@ export const AppDataSource = new DataSource({
   dropSchema: false,
   keepConnectionAlive: true,
   logging: process.env.NODE_ENV !== 'production',
-  entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+  // entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+  entities: [
+    UserEntity,
+    StudentEntity,
+    LecturerEntity,
+    CriteriaEntity,
+    SubCriteriaEntity,
+    KeywordsEntity,
+    ThesisKeywordsEntity,
+    SelectionEntity,
+    ReccomendationEntity,
+    AssessmentEntity,
+    SessionEntity,
+  ],
   migrations: [__dirname + '/migrations/**/*{.ts,.js}'],
   migrationsTableName: 'migrations',
   poolSize: process.env.DATABASE_MAX_CONNECTIONS
