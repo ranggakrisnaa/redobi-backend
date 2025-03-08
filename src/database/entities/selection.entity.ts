@@ -1,4 +1,3 @@
-import { AbstractEntity } from '@/database/entities/abstract.entity';
 import {
   Column,
   Entity,
@@ -6,10 +5,11 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { Uuid } from '../../common/types/common.type';
 import { ILecturer } from '../interface-model/lecturer-entity.interface';
 import { ISelection } from '../interface-model/selection-entity.interface';
 import { IStudent } from '../interface-model/student-entity.interface';
-import { Uuid } from '../types/common.type';
+import { AbstractEntity } from './abstract.entity';
 import { LecturerEntity } from './lecturer.entity';
 import { StudentEntity } from './student.entity';
 

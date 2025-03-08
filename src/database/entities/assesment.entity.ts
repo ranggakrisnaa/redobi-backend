@@ -1,4 +1,3 @@
-import { AbstractEntity } from '@/database/entities/abstract.entity';
 import { forwardRef, Module } from '@nestjs/common';
 import {
   Column,
@@ -7,10 +6,11 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { Uuid } from '../../common/types/common.type';
 import { ICriteria } from '../interface-model/criteria-entity.interface';
 import { ILecturer } from '../interface-model/lecturer-entity.interface';
 import { ISubCriteria } from '../interface-model/sub-criteria-entity.entity';
-import { Uuid } from '../types/common.type';
+import { AbstractEntity } from './abstract.entity';
 import { CriteriaEntity } from './criteria.entity';
 import { LecturerEntity } from './lecturer.entity';
 import { SubCriteriaEntity } from './sub-criteria.entity';

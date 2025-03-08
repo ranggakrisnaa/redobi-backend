@@ -65,7 +65,6 @@ async function bootstrap() {
     type: VersioningType.URI,
   });
 
-  // app.useGlobalGuards(new AuthGuard(reflector, app.get(AuthService)));
   app.useGlobalFilters(new GlobalExceptionFilter(configService));
   // app.useGlobalFilters(new SuccessResponseFilter());
   app.useGlobalPipes(

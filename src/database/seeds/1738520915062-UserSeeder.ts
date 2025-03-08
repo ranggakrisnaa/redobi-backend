@@ -1,20 +1,20 @@
-import { UserEntity } from '@/common/entities/user.entity';
+import data from '@/database/dummies/admin.json';
 import { hashPassword } from '@/utils/password.util';
 import { DataSource } from 'typeorm';
 import { Seeder } from 'typeorm-extension';
-import data from '../dummies/admin.json';
+import { UserEntity } from '../entities/user.entity';
+import { IUser } from '../interface-model/user-entity.interface';
 
-export class UserSeeder implements Seeder {
+export class UserSeeder1738520915062 implements Seeder {
   track = false;
 
   public async run(dataSource: DataSource): Promise<void> {
     const repository = dataSource.getRepository(UserEntity);
 
-    // Pastikan data dalam format yang benar sebelum diproses
     const adminData =
       Array.isArray(data) && data.length > 0 && Array.isArray(data[0].data)
-        ? data[0].data.map((admin) => ({
-            fullName: admin.full_name,
+        ? data[0].data.map((admin: Partial<IUser>) => ({
+            fullName: admin.fullName,
             email: admin.email,
             username: admin.username,
             password: admin.password,

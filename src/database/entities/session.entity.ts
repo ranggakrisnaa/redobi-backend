@@ -1,4 +1,3 @@
-import { AbstractEntity } from '@/database/entities/abstract.entity';
 import {
   Column,
   Entity,
@@ -6,9 +5,11 @@ import {
   OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+
+import { Uuid } from '../../common/types/common.type';
 import { ISession } from '../interface-model/session-entity.interface';
 import { IUser } from '../interface-model/user-entity.interface';
-import { Uuid } from '../types/common.type';
+import { AbstractEntity } from './abstract.entity';
 import { UserEntity } from './user.entity';
 
 @Entity('sessions')

@@ -24,7 +24,7 @@ export class CreateStudentsTable1738768055696 implements MigrationInterface {
                 "judul_skripsi" text NOT NULL,
                 "abstract" text NOT NULL,
                 "class" "public"."students_class_enum" NOT NULL,
-                "image_url" character varying(200) NOT NULL,
+                "image_url" text NOT NULL,
                 "user_id" uuid NOT NULL,
                 "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
                 "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),

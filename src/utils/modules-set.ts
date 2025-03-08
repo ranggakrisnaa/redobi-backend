@@ -31,7 +31,7 @@ function generateModulesSet() {
     ConfigModule.forRoot({
       isGlobal: true,
       load: [appConfig, databaseConfig, redisConfig, authConfig, mailConfig],
-      envFilePath: ['.env.local'],
+      envFilePath: ['.env'],
     }),
   ];
   let customModules: ModuleMetadata['imports'] = [];

@@ -1,4 +1,4 @@
-import { UserEntity } from '@/common/entities/user.entity';
+import { UserEntity } from '@/database/entities/user.entity';
 import { IUser } from '@/database/interface-model/user-entity.interface';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';

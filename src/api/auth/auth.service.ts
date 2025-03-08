@@ -1,14 +1,9 @@
-import { UserEntity } from '@/common/entities/user.entity';
-import { IEmailJob } from '@/common/interfaces/job.interface';
 import { AllConfigType } from '@/config/config.type';
 import { INITIAL_VALUE } from '@/constants/app.constant';
-import { QueueName } from '@/constants/job.constant';
+import { UserEntity } from '@/database/entities/user.entity';
 import { OtpTrialStatus } from '@/database/enums/otp-trial-status.enum';
 import { verifyPassword } from '@/utils/password.util';
-import { InjectQueue } from '@nestjs/bullmq';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import {
-  Inject,
   Injectable,
   InternalServerErrorException,
   UnauthorizedException,
@@ -16,8 +11,6 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Queue } from 'bullmq';
-import { Cache } from 'cache-manager';
 import ms from 'ms';
 import { DataSource, Repository } from 'typeorm';
 import { Token, Uuid } from '../../common/types/common.type';
@@ -36,10 +29,6 @@ export class AuthService {
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
     private readonly sessionRepository: SessionRepository,
-    @InjectQueue(QueueName.EMAIL)
-    private readonly emailQueue: Queue<IEmailJob, any, string>,
-    @Inject(CACHE_MANAGER)
-    private readonly cacheManager: Cache,
   ) {}
 
   async signIn(reqBody: LoginReqDto): Promise<SignInResponse> {

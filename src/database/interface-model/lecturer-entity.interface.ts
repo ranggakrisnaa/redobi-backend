@@ -7,8 +7,8 @@ import { IUser } from './user-entity.interface';
 
 export interface ILecturer extends IBaseEntity {
   id: Uuid;
-  fullName: number;
-  jumlahBimbingan: string;
+  fullName: string;
+  jumlahBimbingan: number;
   imageUrl: string;
   userId: Uuid;
   user?: IUser;

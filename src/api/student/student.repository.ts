@@ -1,8 +1,7 @@
 import { OffsetPaginationDto } from '@/common/dto/offset-pagination/offset-pagination.dto';
 import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
-import { SessionEntity } from '@/common/entities/session.entity';
-import { StudentEntity } from '@/common/entities/student.entity';
 import { OrderDirectionEnum, SortEnum } from '@/common/enums/sort.enum';
+import { StudentEntity } from '@/database/entities/student.entity';
 import { IStudent } from '@/database/interface-model/student-entity.interface';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -12,9 +11,8 @@ import { StudentPaginationReqQuery } from './dto/query.req.dto';
 @Injectable()
 export class StudentRepository extends Repository<StudentEntity> {
   constructor(
-    @InjectRepository(SessionEntity)
+    @InjectRepository(StudentEntity)
     private readonly repo: Repository<StudentEntity>,
-    private readonly paginationUtil: OffsetPaginationDto,
   ) {
     super(repo.target, repo.manager, repo.queryRunner);
   }
@@ -42,16 +40,18 @@ export class StudentRepository extends Repository<StudentEntity> {
       );
 
       query.orderBy(
-        sortField?.alias ?? 'createdAt',
-        this.paginationUtil.getOrder(reqQuery.order as OrderDirectionEnum),
+        sortField?.alias ?? `${targetName}.createdAt`,
+        reqQuery.order as OrderDirectionEnum,
       );
     }
 
-    const data = await query.getRawMany<IStudent>();
+    query
+      .limit(reqQuery.limit ?? 10)
+      .offset((reqQuery.page - 1) * (reqQuery.limit ?? 0));
 
-    query.limit(reqQuery.limit ?? 10).offset(reqQuery.page ?? 1);
+    const [data, total] = await query.getManyAndCount();
 
-    const metaDto = new OffsetPaginationDto(data.length, {
+    const metaDto = new OffsetPaginationDto(total, {
       limit: reqQuery.limit,
       offset: reqQuery.page,
     });
@@ -60,5 +60,14 @@ export class StudentRepository extends Repository<StudentEntity> {
       data: data,
       pagination: metaDto,
     };
+  }
+
+  async bulkCreate(data: IStudent[]): Promise<IStudent[]> {
+    if (!data.length) {
+      return [];
+    }
+
+    const students = this.repo.create(data);
+    return await this.repo.save(students);
   }
 }

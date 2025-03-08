@@ -28,7 +28,7 @@ export class TypeOrmConfigService implements TypeOrmOptionsFactory {
           ? ['error', 'warn', 'query', 'schema']
           : ['error', 'warn'],
       ),
-      entities: [__dirname + '/../common/entities/**/*{.ts,.js}'],
+      entities: [__dirname + '/../**/*.entity{.ts,.js}'],
       migrations: [__dirname + '/migrations/**/*{.ts,.js}'],
       migrationsTableName: 'migrations',
       poolSize: this.configService.get('database.maxConnections', {

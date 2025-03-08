@@ -1,6 +1,6 @@
-import { SessionEntity } from '@/common/entities/session.entity';
-import { ISession } from '@/common/interface-model/session-entity.interface';
 import { Uuid } from '@/common/types/common.type';
+import { SessionEntity } from '@/database/entities/session.entity';
+import { ISession } from '@/database/interface-model/session-entity.interface';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InsertResult, QueryRunner, Repository, UpdateResult } from 'typeorm';
 

@@ -13,7 +13,7 @@ export class CreateLecturersTable1738768169349 implements MigrationInterface {
                 "full_name" character varying(200) NOT NULL,
                 "jumlah_bimbingan" integer NOT NULL,
                 "tipe_pembimbing" "public"."lecturers_tipe_pembimbing_enum" NOT NULL,
-                "image_url" character varying(200) NOT NULL,
+                "image_url" text NOT NULL,
                 "user_id" uuid NOT NULL,
                 "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
                 "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),

@@ -4,8 +4,8 @@ import {
   EnumField,
   NumberField,
   StringField,
-  StringFieldOptional,
 } from '@/decorators/field.decorators';
+import { Optional } from '@nestjs/common';
 
 export class CreateStudentDto {
   @StringField()
@@ -29,9 +29,6 @@ export class CreateStudentDto {
   @EnumField(() => ClassEnum)
   class: ClassEnum;
 
-  @StringField()
+  @Optional()
   imageUrl: string;
-
-  @StringFieldOptional()
-  photoUrl: string;
 }

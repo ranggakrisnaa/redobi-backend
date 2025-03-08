@@ -11,7 +11,7 @@ export class CreateUsersTable1738767495375 implements MigrationInterface {
                 "username" character varying(100) NOT NULL,
                 "email" character varying(200) NOT NULL,
                 "password" character varying(200) NOT NULL,
-                "image_url" character varying(200) NOT NULL,
+                "image_url" text NOT NULL,
                 "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
                 "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
                 "deleted_at" TIMESTAMP WITH TIME ZONE,

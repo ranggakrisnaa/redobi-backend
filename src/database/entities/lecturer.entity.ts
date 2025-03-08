@@ -1,4 +1,3 @@
-import { AbstractEntity } from '@/database/entities/abstract.entity';
 import {
   Column,
   Entity,
@@ -8,17 +7,19 @@ import {
   PrimaryGeneratedColumn,
   Relation,
 } from 'typeorm';
-import { TipePembimbingEnum } from '../../database/enums/tipe-pembimbing.enum';
+import { Uuid } from '../../common/types/common.type';
+import { TipePembimbingEnum } from '../enums/tipe-pembimbing.enum';
 import { IAssessment } from '../interface-model/assessment-entity.interface';
+import { ILecturer } from '../interface-model/lecturer-entity.interface';
 import { IReccomendation } from '../interface-model/reccomendation-entity.interface';
-import { Uuid } from '../types/common.type';
+import { AbstractEntity } from './abstract.entity';
 import { AssessmentEntity } from './assesment.entity';
 import { ReccomendationEntity } from './reccomendation.entity';
 import { SelectionEntity } from './selection.entity';
 import { UserEntity } from './user.entity';
 
 @Entity('lecturers')
-export class LecturerEntity extends AbstractEntity {
+export class LecturerEntity extends AbstractEntity implements ILecturer {
   @PrimaryGeneratedColumn('uuid', {
     primaryKeyConstraintName: 'PK_lecturers_id',
   })
@@ -33,7 +34,7 @@ export class LecturerEntity extends AbstractEntity {
   @Column({ type: 'enum', enum: TipePembimbingEnum, name: 'tipe_pembimbing' })
   tipePembimbing: TipePembimbingEnum;
 
-  @Column({ type: 'varchar', length: 200, name: 'image_url' })
+  @Column({ type: 'text', name: 'image_url' })
   imageUrl: string;
 
   @Column({
@@ -57,8 +58,8 @@ export class LecturerEntity extends AbstractEntity {
     () => ReccomendationEntity,
     (reccomendation) => reccomendation.lecturer,
   )
-  recomendation?: IReccomendation;
+  recomendation?: IReccomendation[];
 
   @OneToMany(() => AssessmentEntity, (assessment) => assessment.lecturer)
-  assessment?: IAssessment;
+  assessment?: IAssessment[];
 }

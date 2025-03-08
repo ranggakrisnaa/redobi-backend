@@ -1,4 +1,3 @@
-import { AbstractEntity } from '@/database/entities/abstract.entity';
 import {
   Column,
   Entity,
@@ -7,11 +6,12 @@ import {
   OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { Uuid } from '../../common/types/common.type';
 import { ILecturer } from '../interface-model/lecturer-entity.interface';
 import { ISession } from '../interface-model/session-entity.interface';
 import { IStudent } from '../interface-model/student-entity.interface';
 import { IUser } from '../interface-model/user-entity.interface';
-import { Uuid } from '../types/common.type';
+import { AbstractEntity } from './abstract.entity';
 import { LecturerEntity } from './lecturer.entity';
 import { SessionEntity } from './session.entity';
 import { StudentEntity } from './student.entity';
@@ -37,7 +37,7 @@ export class UserEntity extends AbstractEntity implements IUser {
   @Column({ type: 'varchar', length: 200 })
   password: string;
 
-  @Column({ type: 'varchar', length: 200, name: 'image_url' })
+  @Column({ type: 'text', name: 'image_url' })
   imageUrl: string;
 
   @OneToMany(() => StudentEntity, (student) => student.user)

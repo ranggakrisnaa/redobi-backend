@@ -2,7 +2,7 @@
   {
     "data": [
       {
-        "full_name": "admin",
+        "fullName": "admin",
         "email": "admin@admin.com",
         "username": "admin",
         "password": "MALE"

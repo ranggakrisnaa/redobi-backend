@@ -1,4 +1,3 @@
-import { AbstractEntity } from '@/database/entities/abstract.entity';
 import {
   Column,
   Entity,
@@ -6,11 +5,13 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { IKeyword } from '../interface-model/keyword-entity.interface';
 import { IThesisKeyword } from '../interface-model/thesis_keyword-entity.interface';
+import { AbstractEntity } from './abstract.entity';
 import { ThesisKeywordsEntity } from './thesis_keyword.entity';
 
 @Entity('keywords')
-export class KeywordsEntity extends AbstractEntity {
+export class KeywordsEntity extends AbstractEntity implements IKeyword {
   @PrimaryGeneratedColumn('increment', {
     primaryKeyConstraintName: 'PK_keyword_id',
   })

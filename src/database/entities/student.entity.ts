@@ -1,4 +1,3 @@
-import { AbstractEntity } from '@/database/entities/abstract.entity';
 import {
   Column,
   Entity,
@@ -7,13 +6,15 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { ClassEnum } from '../../database/enums/class.enum';
-import { MajorEnum } from '../../database/enums/major.enum';
+import { ClassEnum } from '../enums/class.enum';
+import { MajorEnum } from '../enums/major.enum';
+
+import { Uuid } from '../../common/types/common.type';
 import { IReccomendation } from '../interface-model/reccomendation-entity.interface';
 import { ISelection } from '../interface-model/selection-entity.interface';
 import { IStudent } from '../interface-model/student-entity.interface';
 import { IUser } from '../interface-model/user-entity.interface';
-import { Uuid } from '../types/common.type';
+import { AbstractEntity } from './abstract.entity';
 import { ReccomendationEntity } from './reccomendation.entity';
 import { SelectionEntity } from './selection.entity';
 import { UserEntity } from './user.entity';
@@ -46,7 +47,7 @@ export class StudentEntity extends AbstractEntity implements IStudent {
   @Column({ type: 'enum', enum: ClassEnum })
   class: ClassEnum;
 
-  @Column({ type: 'varchar', length: 200, name: 'image_url' })
+  @Column({ type: 'text', name: 'image_url' })
   imageUrl: string;
 
   @Column({
