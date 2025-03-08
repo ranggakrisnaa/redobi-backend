@@ -133,6 +133,18 @@ Table selections {
   deleted_at timestamptz 
 }
 
+Table sessions {
+  id uuid [pk, default: "uuid_generate_v4()"]
+  hash_token varchar(255)
+  otp_code int(4)
+  otp_trial int(4)
+  is_limit boolean
+  user_id uuid
+  created_at timestamptz 
+  updated_at timestamptz 
+  deleted_at timestamptz 
+}
+
 Ref: users.id < students.user_id
 Ref: users.id < lecturers.user_id
 Ref: thesis_keywords.id < keywords.thesis_keyword_id
@@ -144,3 +156,4 @@ Ref: lecturers.id < selections.lecturer_id
 Ref: lecturers.id < assessments.lecturer_id
 Ref: criteria.id < assessments.criteria_id
 Ref: sub_criteria.id < assessments.sub_criteria_id
+Ref: users.id < sessions.user_id

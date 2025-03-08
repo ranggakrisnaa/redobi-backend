@@ -9,16 +9,18 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory, Reflector } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import compression from 'compression';
 import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
+import { join } from 'path';
 import { AppModule } from './app.module';
 import { type AllConfigType } from './config/config.type';
 import { GlobalExceptionFilter } from './filters/global-exception.filter';
 import setupSwagger from './utils/setup-swagger';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
   });
 
@@ -63,8 +65,8 @@ async function bootstrap() {
     type: VersioningType.URI,
   });
 
-  // app.useGlobalGuards(new AuthGuard(reflector, app.get(AuthService)));
   app.useGlobalFilters(new GlobalExceptionFilter(configService));
+  // app.useGlobalFilters(new SuccessResponseFilter());
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,
@@ -76,6 +78,9 @@ async function bootstrap() {
     }),
   );
   app.useGlobalInterceptors(new ClassSerializerInterceptor(reflector));
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+    prefix: '/uploads',
+  });
 
   if (isDevelopment) {
     setupSwagger(app);

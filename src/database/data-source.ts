@@ -1,4 +1,3 @@
-/* eslint-disable no-undef */
 import 'reflect-metadata';
 import { DataSource, DataSourceOptions } from 'typeorm';
 import { SeederOptions } from 'typeorm-extension';
@@ -33,7 +32,7 @@ export const AppDataSource = new DataSource({
           cert: process.env.DATABASE_CERT ?? undefined,
         }
       : undefined,
-  seeds: [__dirname + '/seeds/**/*{.ts,.js}'],
+  seeds: ['src/database/seeds/**/*{.ts,.js}'],
   seedTracking: true,
-  factories: [__dirname + '/factories/**/*{.ts,.js}'],
+  factories: ['src/database/factories/**/*{.ts,.js}'],
 } as DataSourceOptions & SeederOptions);

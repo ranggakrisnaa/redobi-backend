@@ -1,6 +1,6 @@
 import { SuccessDto } from '@/common/dto/success.dto';
-import { CustomSuccessResponseEnum } from '@/common/enums/custom-success-response.enum.';
-import { RequestMethodEnum } from '@/common/enums/request-method.enum';
+import { CustomSuccessResponseEnum } from '@/database/enums/custom-success-response.enum.';
+import { RequestMethodEnum } from '@/database/enums/request-method.enum';
 import {
   ArgumentsHost,
   Catch,
@@ -17,6 +17,7 @@ export class SuccessResponseFilter<T> implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
     const method = request.method;
     const statusCode = response.statusCode || HttpStatus.OK;
+    console.log(exception);
 
     let customMessage: string;
     switch (method) {

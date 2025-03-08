@@ -50,23 +50,19 @@ function generateModulesSet() {
   const bullModule = BullModule.forRootAsync({
     imports: [ConfigModule],
     useFactory: (configService: ConfigService<AllConfigType>) => {
+      const isProduction = process.env.NODE_ENV === 'production';
+
       return {
         connection: {
           url: configService.get('redis.url', { infer: true }),
-          host: configService.getOrThrow('redis.host', {
-            infer: true,
+          host: configService.getOrThrow('redis.host', { infer: true }),
+          port: configService.getOrThrow('redis.port', { infer: true }),
+          password: configService.getOrThrow('redis.password', { infer: true }),
+          ...(isProduction && {
+            retryStrategy: (times: number) => Math.min(times * 100, 3000),
+            tls: { rejectUnauthorized: false },
+            maxRetriesPerRequest: null,
           }),
-          port: configService.getOrThrow('redis.port', {
-            infer: true,
-          }),
-          password: configService.getOrThrow('redis.password', {
-            infer: true,
-          }),
-          retryStrategy: (times: number) => Math.min(times * 100, 3000),
-          tls: {
-            rejectUnauthorized: false,
-          },
-          maxRetriesPerRequest: null,
         },
       };
     },
@@ -88,12 +84,10 @@ function generateModulesSet() {
           infer: true,
         }),
         loaderOptions: {
-          // eslint-disable-next-line no-undef
           path: path.join(__dirname, '/../i18n/'),
           watch: isLocal,
         },
         typesOutputPath: path.join(
-          // eslint-disable-next-line no-undef
           __dirname,
           '../../src/generated/i18n.generated.ts',
         ),
@@ -112,13 +106,17 @@ function generateModulesSet() {
   const cacheModule = CacheModule.registerAsync({
     imports: [ConfigModule],
     useFactory: async (configService: ConfigService<AllConfigType>) => {
+      const isProduction = process.env.NODE_ENV === 'production';
+
       const store = await redisStore({
         host: configService.getOrThrow('redis.host', { infer: true }),
         port: configService.getOrThrow('redis.port', { infer: true }),
         password: configService.getOrThrow('redis.password', { infer: true }),
-        retryStrategy: (times: number) => Math.min(times * 100, 3000),
-        tls: { rejectUnauthorized: false },
-        maxRetriesPerRequest: null,
+        ...(isProduction && {
+          retryStrategy: (times: number) => Math.min(times * 100, 3000),
+          tls: { rejectUnauthorized: false },
+          maxRetriesPerRequest: null,
+        }),
       });
       return {
         store: store as unknown as CacheStore,

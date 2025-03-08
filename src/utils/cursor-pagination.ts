@@ -323,12 +323,10 @@ export type OrderByCondition = {
 };
 
 function atob(value: string): string {
-  // eslint-disable-next-line no-undef
   return Buffer.from(value, 'base64').toString();
 }
 
 function btoa(value: string): string {
-  // eslint-disable-next-line no-undef
   return Buffer.from(value).toString('base64');
 }
 
