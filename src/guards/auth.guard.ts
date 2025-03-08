@@ -1,46 +1,40 @@
 import { AuthService } from '@/api/auth/auth.service';
-import { IS_AUTH_OPTIONAL, IS_PUBLIC } from '@/constants/app.constant';
+import { SessionRepository } from '@/api/session/session.repository';
 import {
   CanActivate,
   ExecutionContext,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
-    private reflector: Reflector,
     private authService: AuthService,
+    private sessionRepository: SessionRepository,
   ) {}
 
-  async canActivate(context: ExecutionContext): Promise<boolean> {
-    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
-
-    if (isPublic) return true;
-
-    const isAuthOptional = this.reflector.getAllAndOverride<boolean>(
-      IS_AUTH_OPTIONAL,
-      [context.getHandler(), context.getClass()],
-    );
-
+  async canActivate(context: ExecutionContext) {
     const request = context.switchToHttp().getRequest();
-    const accessToken = this.extractTokenFromHeader(request);
-
-    if (isAuthOptional && !accessToken) {
-      return true;
-    }
-    if (!accessToken) {
+    const token = this.extractTokenFromHeader(request);
+    if (!token) {
       throw new UnauthorizedException();
     }
+    try {
+      const accessToken = this.extractTokenFromHeader(request);
+      const checkHasToken = await this.sessionRepository.findOneBy({
+        hashToken: accessToken,
+      });
 
-    request['user'] = await this.authService.verifyAccessToken(accessToken);
+      if (!accessToken && accessToken !== checkHasToken.hashToken) {
+        throw new UnauthorizedException();
+      }
 
+      request['user'] = await this.authService.verifyAccessToken(accessToken);
+    } catch {
+      throw new UnauthorizedException();
+    }
     return true;
   }
 

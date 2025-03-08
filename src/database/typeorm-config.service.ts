@@ -10,6 +10,7 @@ export class TypeOrmConfigService implements TypeOrmOptionsFactory {
 
   createTypeOrmOptions(): TypeOrmModuleOptions {
     return {
+      url: this.configService.get('database.url', { infer: true }),
       type: this.configService.get('database.type', { infer: true }),
       host: this.configService.get('database.host', { infer: true }),
       port: this.configService.get('database.port', { infer: true }),

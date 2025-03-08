@@ -1,0 +1,159 @@
+Project redobi {
+  database_type: 'PostgreSQL'
+  Note: '''
+    # Recommendation
+  '''
+}
+
+Enum Major {
+  SISTEM_CERDAS
+  REKAYA_PERANGKAT_LUNAK
+  MULTIMEDIA
+}
+
+Enum Class {
+  REGULER
+  REGULER_MALAM
+  KARYAWAN
+}
+
+Enum Tipe_Pembimbing {
+  PEMBIMBING_1
+  PEMBIMBING_2
+}
+
+Enum Criteria_Type {
+  BENEFIT
+  COST
+}
+
+
+Table users {
+  id uuid [pk, default: "uuid_generate_v4()"]
+  full_name varchar(200) [not null]
+  username varchar(100) [not null]
+  email  varchar(200) [not null]
+  password varchar(200) [not null]
+  created_at timestamptz 
+  updated_at timestamptz 
+  deleted_at timestamptz 
+}
+
+Table students {
+  id uuid [pk, default: "uuid_generate_v4()"]
+  user_id uuid
+  full_name varchar(200) [not null]
+  nim varchar(200) [not null]
+  tahun_masuk int(4)
+  major  Major [not null]
+  judul_skripsi text [not null]
+  abstract text [not null]
+  class Class [not null]
+  created_at timestamptz 
+  updated_at timestamptz 
+  deleted_at timestamptz 
+}
+
+Table lecturers {
+  id uuid [pk, default: "uuid_generate_v4()"]
+  user_id uuid 
+  full_name varchar(200) [not null]
+  jumlah_bimbingan int(5)
+  tipe_pembimbing Tipe_Pembimbing
+  created_at timestamptz 
+  updated_at timestamptz 
+  deleted_at timestamptz 
+}
+
+Table criteria {
+  id int(11) [pk, increment]
+  sub_criteria_id int(11)
+  name varchar(100) [not null]
+  weight decimal(5,2) [default: 0]
+  type Criteria_Type [not null]
+  created_at timestamptz 
+  updated_at timestamptz 
+  deleted_at timestamptz 
+}
+
+
+Table sub_criteria {
+  id int(11) [pk, increment]
+  name varchar(100) [not null]
+  weight decimal(5,2) [default: 0]
+  created_at timestamptz 
+  updated_at timestamptz 
+  deleted_at timestamptz 
+}
+
+Table thesis_keywords {
+  id int(11) [pk, increment]
+  category Major [not null]
+  created_at timestamptz 
+  updated_at timestamptz 
+  deleted_at timestamptz 
+}
+
+Table keywords {
+  id int(11) [pk, increment]
+  thesis_keyword_id int(11)
+  name varchar(200) [not null]
+  created_at timestamptz 
+  updated_at timestamptz 
+  deleted_at timestamptz 
+}
+
+Table assessments {
+  id int(11) [pk, increment]
+  lecturer_id uuid
+  criteria_id int(11) 
+  sub_criteria_id int(11)
+  score decimal(5,2) [default: 0]
+  created_at timestamptz 
+  updated_at timestamptz 
+  deleted_at timestamptz 
+}
+
+Table reccomendations {
+  id int(11) [pk, increment]
+  lecturer_id uuid
+  student_id uuid
+  recommendation_score decimal(5,2)
+  created_at timestamptz 
+  updated_at timestamptz 
+  deleted_at timestamptz 
+}
+
+Table selections {
+  id int(11) [pk, increment]
+  lecturer_id uuid
+  student_id uuid
+  created_at timestamptz 
+  updated_at timestamptz 
+  deleted_at timestamptz 
+}
+
+Table sessions {
+  id uuid [pk, default: "uuid_generate_v4()"]
+  hash_token varchar(255)
+  otp_code int(4)
+  otp_trial int(4)
+  is_limit boolean
+  user_id uuid
+  created_at timestamptz 
+  updated_at timestamptz 
+  deleted_at timestamptz 
+}
+
+Ref: users.id < students.user_id
+Ref: users.id < lecturers.user_id
+Ref: thesis_keywords.id < keywords.thesis_keyword_id
+Ref: sub_criteria.id < criteria.sub_criteria_id
+Ref: students.id < reccomendations.student_id
+Ref: lecturers.id < reccomendations.lecturer_id
+Ref: students.id < selections.student_id
+Ref: lecturers.id < selections.lecturer_id
+Ref: lecturers.id < assessments.lecturer_id
+Ref: criteria.id < assessments.criteria_id
+Ref: sub_criteria.id < assessments.sub_criteria_id
+Ref: users.id < sessions.user_id

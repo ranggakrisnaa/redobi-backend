@@ -10,7 +10,11 @@ import mailConfig from '@/mail/config/mail.config';
 import { MailModule } from '@/mail/mail.module';
 import redisConfig from '@/redis/config/redis.config';
 import { BullModule } from '@nestjs/bullmq';
+<<<<<<< HEAD
 import { CacheModule } from '@nestjs/cache-manager';
+=======
+import { CacheModule, CacheStore } from '@nestjs/cache-manager';
+>>>>>>> 3044c10309d7ab4acf452f07a1900b4d674b996f
 import { ModuleMetadata } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -50,6 +54,7 @@ function generateModulesSet() {
   const bullModule = BullModule.forRootAsync({
     imports: [ConfigModule],
     useFactory: (configService: ConfigService<AllConfigType>) => {
+<<<<<<< HEAD
       return {
         connection: {
           host: configService.getOrThrow('redis.host', {
@@ -62,6 +67,21 @@ function generateModulesSet() {
             infer: true,
           }),
           tls: configService.get('redis.tlsEnabled', { infer: true }),
+=======
+      const isProduction = process.env.NODE_ENV === 'production';
+
+      return {
+        connection: {
+          url: configService.get('redis.url', { infer: true }),
+          host: configService.getOrThrow('redis.host', { infer: true }),
+          port: configService.getOrThrow('redis.port', { infer: true }),
+          password: configService.getOrThrow('redis.password', { infer: true }),
+          ...(isProduction && {
+            retryStrategy: (times: number) => Math.min(times * 100, 3000),
+            tls: { rejectUnauthorized: false },
+            maxRetriesPerRequest: null,
+          }),
+>>>>>>> 3044c10309d7ab4acf452f07a1900b4d674b996f
         },
       };
     },
@@ -105,6 +125,7 @@ function generateModulesSet() {
   const cacheModule = CacheModule.registerAsync({
     imports: [ConfigModule],
     useFactory: async (configService: ConfigService<AllConfigType>) => {
+<<<<<<< HEAD
       return {
         store: await redisStore({
           host: configService.getOrThrow('redis.host', {
@@ -118,6 +139,22 @@ function generateModulesSet() {
           }),
           tls: configService.get('redis.tlsEnabled', { infer: true }),
         }),
+=======
+      const isProduction = process.env.NODE_ENV === 'production';
+
+      const store = await redisStore({
+        host: configService.getOrThrow('redis.host', { infer: true }),
+        port: configService.getOrThrow('redis.port', { infer: true }),
+        password: configService.getOrThrow('redis.password', { infer: true }),
+        ...(isProduction && {
+          retryStrategy: (times: number) => Math.min(times * 100, 3000),
+          tls: { rejectUnauthorized: false },
+          maxRetriesPerRequest: null,
+        }),
+      });
+      return {
+        store: store as unknown as CacheStore,
+>>>>>>> 3044c10309d7ab4acf452f07a1900b4d674b996f
       };
     },
     isGlobal: true,

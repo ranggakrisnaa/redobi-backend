@@ -41,5 +41,9 @@ export default registerAs<RedisConfig>('redis', () => {
     port: process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT, 10) : 6379,
     password: process.env.REDIS_PASSWORD,
     tlsEnabled: process.env.REDIS_TLS_ENABLED === 'true',
+<<<<<<< HEAD
+=======
+    retryStrategy: (times: number) => Math.min(times * 100, 3000),
+>>>>>>> 3044c10309d7ab4acf452f07a1900b4d674b996f
   };
 });

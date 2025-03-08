@@ -23,10 +23,14 @@ export class EmailProcessor extends WorkerHost {
   constructor(private readonly emailQueueService: EmailQueueService) {
     super();
   }
+<<<<<<< HEAD
   async process(
     job: Job<IEmailJob, any, string>,
     _token?: string,
   ): Promise<any> {
+=======
+  async process(job: Job<IEmailJob, void, string>): Promise<void> {
+>>>>>>> 3044c10309d7ab4acf452f07a1900b4d674b996f
     this.logger.debug(
       `Processing job ${job.id} of type ${job.name} with data ${JSON.stringify(job.data)}...`,
     );
@@ -56,6 +60,7 @@ export class EmailProcessor extends WorkerHost {
     this.logger.debug(`Job ${job.id} has been completed`);
   }
 
+<<<<<<< HEAD
   @OnWorkerEvent('failed')
   async onFailed(job: Job) {
     this.logger.error(
@@ -73,4 +78,23 @@ export class EmailProcessor extends WorkerHost {
   async onError(job: Job, error: Error) {
     this.logger.error(`Job ${job.id} has failed with error: ${error.message}`);
   }
+=======
+  // @OnWorkerEvent('failed')
+  // async onFailed(job: Job) {
+  //   this.logger.error(
+  //     `Job ${job.id} has failed with reason: ${job.failedReason}`,
+  //   );
+  //   this.logger.error(job.stacktrace);
+  // }
+
+  // @OnWorkerEvent('stalled')
+  // async onStalled(job: Job) {
+  //   this.logger.error(`Job ${job.id} has been stalled`);
+  // }
+
+  // @OnWorkerEvent('error')
+  // async onError(job: Job, error: Error) {
+  //   this.logger.error(`Job ${job.id} has failed with error: ${error.message}`);
+  // }
+>>>>>>> 3044c10309d7ab4acf452f07a1900b4d674b996f
 }
