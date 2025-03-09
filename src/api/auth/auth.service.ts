@@ -2,6 +2,7 @@ import { AllConfigType } from '@/config/config.type';
 import { INITIAL_VALUE } from '@/constants/app.constant';
 import { UserEntity } from '@/database/entities/user.entity';
 import { OtpTrialStatus } from '@/database/enums/otp-trial-status.enum';
+import { ISession } from '@/database/interface-model/session-entity.interface';
 import { verifyPassword } from '@/utils/password.util';
 import {
   Injectable,
@@ -15,8 +16,9 @@ import ms from 'ms';
 import { DataSource, Repository } from 'typeorm';
 import { Token, Uuid } from '../../common/types/common.type';
 import { SessionRepository } from '../session/session.repository';
-import { LoginReqDto } from './dto/login.req.dto';
-import { VerifyLoginReqDto } from './dto/verify-login.req.dto';
+import { LoginReqDto } from './dto/login.dto';
+import { LogoutResDto } from './dto/logout.res';
+import { VerifyLoginReqDto } from './dto/verify-login.dto';
 import { JwtPayloadType } from './types/jwt-payload.type';
 import { SignInResponse } from './types/sign-in-response.type';
 
@@ -31,7 +33,7 @@ export class AuthService {
     private readonly sessionRepository: SessionRepository,
   ) {}
 
-  async signIn(reqBody: LoginReqDto): Promise<SignInResponse> {
+  async SignIn(reqBody: LoginReqDto): Promise<SignInResponse> {
     const foundUser = await this.userRepository.findOneBy({
       email: reqBody.email,
     });
@@ -82,7 +84,7 @@ export class AuthService {
     }
   }
 
-  async verifySignIn(reqBody: VerifyLoginReqDto): Promise<Token> {
+  async VerifySignIn(reqBody: VerifyLoginReqDto): Promise<Token> {
     const now = new Date();
 
     const foundSession = await this.sessionRepository.findOne({
@@ -162,7 +164,7 @@ export class AuthService {
     });
   }
 
-  async verifyAccessToken(token: string): Promise<JwtPayloadType> {
+  async VerifyAccessToken(token: string): Promise<JwtPayloadType> {
     let payload: JwtPayloadType;
     try {
       payload = this.jwtService.verify(token, {
@@ -215,5 +217,24 @@ export class AuthService {
       refreshToken,
       tokenExpires,
     } as Token;
+  }
+
+  async Logout(userId: string): Promise<Partial<ISession>> {
+    const foundSession = await this.sessionRepository.findOneBy({
+      userId: userId.toString() as Uuid,
+    });
+    if (!foundSession) {
+      throw new UnauthorizedException('Session not found');
+    }
+    try {
+      await this.sessionRepository.update(foundSession.id, {
+        hashToken: INITIAL_VALUE.STRING,
+      });
+      return LogoutResDto.toPlainLogout(foundSession);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        throw new InternalServerErrorException(error.message);
+      }
+    }
   }
 }

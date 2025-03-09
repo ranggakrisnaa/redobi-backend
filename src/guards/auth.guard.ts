@@ -23,15 +23,15 @@ export class AuthGuard implements CanActivate {
     }
     try {
       const accessToken = this.extractTokenFromHeader(request);
-      const checkHasToken = await this.sessionRepository.findOneBy({
+      const session = await this.sessionRepository.findOneBy({
         hashToken: accessToken,
       });
 
-      if (!accessToken && accessToken !== checkHasToken.hashToken) {
+      if (!accessToken || accessToken !== session.hashToken) {
         throw new UnauthorizedException();
       }
 
-      request['user'] = await this.authService.verifyAccessToken(accessToken);
+      request['user'] = await this.authService.VerifyAccessToken(accessToken);
     } catch {
       throw new UnauthorizedException();
     }

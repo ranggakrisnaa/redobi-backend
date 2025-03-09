@@ -1,9 +1,9 @@
 import { plainToInstance } from 'class-transformer';
 import {
   BaseEntity,
-  Column,
   CreateDateColumn,
   DataSource,
+  DeleteDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { getOrder, Order } from '../decorators/order.decorator';
@@ -28,7 +28,7 @@ export abstract class AbstractEntity extends BaseEntity {
   updatedAt: Date;
 
   @Order(9999)
-  @Column({
+  @DeleteDateColumn({
     name: 'deleted_at',
     type: 'timestamptz',
     nullable: true,

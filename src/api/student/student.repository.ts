@@ -1,6 +1,6 @@
 import { OffsetPaginationDto } from '@/common/dto/offset-pagination/offset-pagination.dto';
 import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
-import { OrderDirectionEnum, SortEnum } from '@/common/enums/sort.enum';
+import { OrderDirectionEnum } from '@/common/enums/sort.enum';
 import { StudentEntity } from '@/database/entities/student.entity';
 import { IStudent } from '@/database/interface-model/student-entity.interface';
 import { Injectable } from '@nestjs/common';
@@ -20,29 +20,43 @@ export class StudentRepository extends Repository<StudentEntity> {
   async Pagination(
     reqQuery: StudentPaginationReqQuery,
   ): Promise<OffsetPaginatedDto<IStudent>> {
-    const ALLOW_TO_SORT = [
-      {
-        name: 'name',
-        alias: 'name',
-      },
-    ];
     const targetName = this.repo.metadata.targetName;
-
+    const ALLOW_TO_SORT = [
+      { name: 'full_name', alias: `${targetName}.full_name` },
+      { name: 'created_at', alias: `${targetName}.createdAt` },
+    ];
     const query = this.repo.createQueryBuilder(targetName);
 
-    if (reqQuery.sort === SortEnum.Latest) {
-      query.addOrderBy(`${targetName}.createdAt`, OrderDirectionEnum.Desc);
-    } else if (reqQuery.sort === SortEnum.Oldest) {
-      query.addOrderBy(`${targetName}.createdAt`, OrderDirectionEnum.Asc);
-    } else {
-      const sortField = ALLOW_TO_SORT.find(
-        (sort) => sort.name === reqQuery.sort,
-      );
+    if (reqQuery.class) {
+      query.andWhere(`${targetName}.class = :class`, {
+        class: reqQuery.class,
+      });
+    }
 
-      query.orderBy(
-        sortField?.alias ?? `${targetName}.createdAt`,
-        reqQuery.order as OrderDirectionEnum,
-      );
+    if (reqQuery.major) {
+      query.andWhere(`${targetName}.major = :major`, {
+        major: reqQuery.major,
+      });
+    }
+
+    if (reqQuery.search) {
+      query.andWhere(`${targetName}.name ILIKE :search`, {
+        search: `%${reqQuery.search}%`,
+      });
+    }
+
+    if (reqQuery.tahun_masuk) {
+      query.andWhere(`${targetName}.tahunMasuk = :tahunMasuk`, {
+        tahunMasuk: reqQuery.tahun_masuk,
+      });
+    }
+
+    const sortField = ALLOW_TO_SORT.find((sort) => sort.name === reqQuery.sort);
+
+    if (sortField) {
+      query.orderBy(sortField.alias, reqQuery.order as OrderDirectionEnum);
+    } else {
+      query.orderBy(`${targetName}.createdAt`, OrderDirectionEnum.Desc);
     }
 
     query
