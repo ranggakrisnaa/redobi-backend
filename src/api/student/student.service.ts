@@ -9,13 +9,14 @@ import {
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import * as ExcelJS from 'exceljs';
 import { ExcelJsService } from 'src/exceljs/excel-js.service';
 import { ColumnConfig } from 'src/exceljs/interface/excel-js.interface';
-import { CreateStudentDto } from './dto/create.req.dto';
+import { CreateStudentDto } from './dto/create.dto';
 import { StudentPaginationReqQuery } from './dto/query.req.dto';
-import { UpdateStudentDto } from './dto/update.req.dto';
+import { UpdateStudentDto } from './dto/update.dto';
 import { StudentRepository } from './student.repository';
 import { ErrHandleExcel } from './types/error-handle-excel.type';
 
@@ -36,7 +37,7 @@ export class StudentService {
     req: CreateStudentDto,
     userId: string,
     file?: Express.Multer.File,
-  ): Promise<IStudent> {
+  ): Promise<Partial<IStudent>> {
     const foundStudent = await this.studentRepository.findOneBy({
       nim: req.nim,
     });
@@ -55,7 +56,8 @@ export class StudentService {
         imageUrl,
       });
 
-      return await this.studentRepository.save(newStudent);
+      const data = await this.studentRepository.save(newStudent);
+      return CreateStudentDto.toPlainStudent(data);
     } catch (err: unknown) {
       if (err instanceof Error)
         throw new InternalServerErrorException(err.message);
@@ -64,26 +66,54 @@ export class StudentService {
 
   async Update(
     req: UpdateStudentDto,
-    userId: string,
+    studentId: string,
     file: Express.Multer.File,
-  ): Promise<IStudent> {
+  ): Promise<Partial<IStudent>> {
     const foundStudent = await this.studentRepository.findOneBy({
-      userId: userId.toString() as Uuid,
+      id: studentId.toString() as Uuid,
     });
 
     if (!foundStudent) {
-      throw new Error('Student not found');
+      throw new Error('Student data not found.');
     }
     const imageUrl = file
       ? `${DEFAULT.IMAGE_PATH}/${file.filename}`
       : DEFAULT.IMAGE_DEFAULT;
 
     try {
-      return await this.studentRepository.save({
+      const data = await this.studentRepository.save({
         ...foundStudent,
         ...req,
         imageUrl,
       });
+      return CreateStudentDto.toPlainStudent(data);
+    } catch (err: unknown) {
+      if (err instanceof Error)
+        throw new InternalServerErrorException(err.message);
+    }
+  }
+
+  async Detail(studentId: string): Promise<IStudent> {
+    const foundStudent = await this.studentRepository.findOneBy({
+      id: studentId.toString() as Uuid,
+    });
+    if (!foundStudent) {
+      throw new NotFoundException('Student data not found.');
+    }
+
+    return foundStudent;
+  }
+
+  async Delete(studentId: string): Promise<Partial<IStudent>> {
+    const foundStudent = await this.studentRepository.findOneBy({
+      id: studentId.toString() as Uuid,
+    });
+    if (!foundStudent) {
+      throw new NotFoundException('Student data not found.');
+    }
+    try {
+      await this.studentRepository.softDelete(foundStudent.id);
+      return CreateStudentDto.toPlainStudent(foundStudent);
     } catch (err: unknown) {
       if (err instanceof Error)
         throw new InternalServerErrorException(err.message);
@@ -114,12 +144,12 @@ export class StudentService {
     await workbook.xlsx.load(file.buffer);
 
     const worksheet = workbook.worksheets[0];
-    if (!worksheet) throw new BadRequestException('Invalid Excel file');
+    if (!worksheet) throw new BadRequestException('Invalid Excel file.');
     const headers = worksheet.getRow(1).values as string[];
 
     if (!headers || headers.length < 7) {
       throw new BadRequestException(
-        'Excel file has invalid or missing headers',
+        'Excel file has invalid or missing headers.',
       );
     }
     const students: IStudent[] = [];
@@ -133,14 +163,14 @@ export class StudentService {
       if (!Object.values(MajorEnum).includes(rowData[4].trim())) {
         errors.push({
           row: rowNumber,
-          message: 'Invalid major',
+          message: 'Invalid major.',
         });
       }
 
       if (!Object.values(ClassEnum).includes(rowData[7].trim())) {
         errors.push({
           row: rowNumber,
-          message: 'Invalid major',
+          message: 'Invalid major.',
         });
       }
 

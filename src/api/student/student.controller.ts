@@ -6,6 +6,7 @@ import { AuthGuard } from '@/guards/auth.guard';
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseUUIDPipe,
@@ -22,9 +23,9 @@ import { ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { UploadService } from 'src/upload/upload.service';
 import { JwtPayloadType } from '../auth/types/jwt-payload.type';
-import { CreateStudentDto } from './dto/create.req.dto';
+import { CreateStudentDto } from './dto/create.dto';
 import { StudentPaginationReqQuery } from './dto/query.req.dto';
-import { UpdateStudentDto } from './dto/update.req.dto';
+import { UpdateStudentDto } from './dto/update.dto';
 import { StudentService } from './student.service';
 
 @ApiTags('students')
@@ -47,6 +48,16 @@ export class StudentController {
   }
 
   @ApiPublic({
+    summary: 'Get Student By Id',
+  })
+  @Get(':studentId')
+  async Detail(
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+  ): Promise<IStudent> {
+    return await this.studentService.Detail(studentId);
+  }
+
+  @ApiPublic({
     type: CreateStudentDto,
     summary: 'Create Student',
   })
@@ -56,7 +67,7 @@ export class StudentController {
     @Body() req: CreateStudentDto,
     @CurrentUser() userToken: JwtPayloadType,
     @UploadedFile() file: Express.Multer.File,
-  ): Promise<IStudent> {
+  ): Promise<Partial<IStudent>> {
     return await this.studentService.Create(req, userToken.id, file);
   }
 
@@ -64,14 +75,24 @@ export class StudentController {
     type: UpdateStudentDto,
     summary: 'Update Student',
   })
-  @Put(':userId')
+  @Put(':studentId')
   @UseInterceptors(FileInterceptor('file', new UploadService().multerOptions))
   async Update(
     @Body() req: UpdateStudentDto,
-    @Param('userId', ParseUUIDPipe) userId: string,
+    @Param('studentId', ParseUUIDPipe) studentId: string,
     @UploadedFile() file: Express.Multer.File,
-  ): Promise<IStudent> {
-    return await this.studentService.Update(req, userId, file);
+  ): Promise<Partial<IStudent>> {
+    return await this.studentService.Update(req, studentId, file);
+  }
+
+  @ApiPublic({
+    summary: 'Delete Student',
+  })
+  @Delete(':studentId')
+  async Delete(
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+  ): Promise<Partial<IStudent>> {
+    return await this.studentService.Delete(studentId);
   }
 
   @ApiPublic({
@@ -83,7 +104,6 @@ export class StudentController {
 
     res.setHeader('Content-Type', 'application/vnd.ms-excel');
     res.setHeader('Content-Disposition', 'attachment; filename=template.xlsx');
-
     res.send(bufferFile);
   }
 
