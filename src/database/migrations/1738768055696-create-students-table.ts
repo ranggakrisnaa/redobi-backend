@@ -12,7 +12,7 @@ export class CreateStudentsTable1738768055696 implements MigrationInterface {
             )
         `);
     await queryRunner.query(`
-            CREATE TYPE "public"."students_class_enum" AS ENUM('Regular', 'Regular Malam', 'Karyawan')
+            CREATE TYPE "public"."students_class_enum" AS ENUM('Reguler', 'Reguler Malam', 'Karyawan')
         `);
     await queryRunner.query(`
             CREATE TABLE "students" (

@@ -1,6 +1,6 @@
 import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
 import { Uuid } from '@/common/types/common.type';
-import { DEFAULT } from '@/constants/app.constant';
+import { DEFAULT, INITIAL_VALUE } from '@/constants/app.constant';
 import { ClassEnum } from '@/database/enums/class.enum';
 import { MajorEnum } from '@/database/enums/major.enum';
 import { IStudent } from '@/database/interface-model/student-entity.interface';
@@ -139,67 +139,83 @@ export class StudentService {
     }
   }
 
-  async handleExcelTemplate(file: Express.Multer.File): Promise<IStudent[]> {
+  async handleExcelTemplate(
+    file: Express.Multer.File,
+    userId: string,
+  ): Promise<IStudent[]> {
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(file.buffer);
-
-    const worksheet = workbook.worksheets[0];
-    if (!worksheet) throw new BadRequestException('Invalid Excel file.');
-    const headers = worksheet.getRow(1).values as string[];
-
-    if (!headers || headers.length < 7) {
-      throw new BadRequestException(
-        'Excel file has invalid or missing headers.',
-      );
-    }
-    const students: IStudent[] = [];
-    const errors: ErrHandleExcel[] = [];
-
-    worksheet.eachRow((row, rowNumber) => {
-      if (rowNumber === 1) return;
-
-      const rowData = row.values as any[];
-
-      if (!Object.values(MajorEnum).includes(rowData[4].trim())) {
-        errors.push({
-          row: rowNumber,
-          message: 'Invalid major.',
-        });
-      }
-
-      if (!Object.values(ClassEnum).includes(rowData[7].trim())) {
-        errors.push({
-          row: rowNumber,
-          message: 'Invalid major.',
-        });
-      }
-
-      const student: Partial<IStudent> = {
-        fullName: typeof rowData[1] === 'string' ? rowData[1].trim() : null,
-        nim: typeof rowData[2] === 'string' ? rowData[2].trim() : null,
-        tahunMasuk:
-          typeof rowData[3] === 'string' ? parseInt(rowData[3]) || null : null,
-        major:
-          typeof rowData[4] === 'string'
-            ? (rowData[4].trim() as MajorEnum)
-            : null,
-        judulSkripsi: typeof rowData[5] === 'string' ? rowData[5].trim() : null,
-        abstract: typeof rowData[6] === 'string' ? rowData[6].trim() : null,
-        class:
-          typeof rowData[7] === 'string'
-            ? (rowData[7].trim() as ClassEnum)
-            : null,
-      };
-
-      students.push(student as IStudent);
-    });
-    if (errors.length > 0) {
-      const errorMessage =
-        `Found ${errors.length} errors in the Excel file:\n` +
-        errors.map((e) => `Row ${e.row}: ${e.message}`).join('\n');
-      throw new BadRequestException(errorMessage);
-    }
     try {
+      await workbook.xlsx.load(file.buffer);
+
+      const worksheet = workbook.worksheets[0];
+      if (!worksheet) throw new BadRequestException('Invalid Excel file.');
+
+      const headers = worksheet.getRow(1).values as string[];
+      if (!headers || headers.length < 7) {
+        throw new BadRequestException(
+          'Excel file has invalid or missing headers.',
+        );
+      }
+
+      const students: IStudent[] = [];
+      const errors: ErrHandleExcel[] = [];
+
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return;
+
+        const rowData = row.values as any[];
+
+        if (!Object.values(MajorEnum).includes(rowData[4]?.trim())) {
+          errors.push({ row: rowNumber, message: 'Invalid major.' });
+        }
+
+        if (!Object.values(ClassEnum).includes(rowData[7]?.trim())) {
+          errors.push({ row: rowNumber, message: 'Invalid class.' });
+        }
+
+        const student: Partial<IStudent> = {
+          fullName:
+            typeof rowData[1] === 'string'
+              ? rowData[1].trim()
+              : INITIAL_VALUE.STRING,
+          nim:
+            typeof rowData[2] === 'number'
+              ? rowData[2].toString()
+              : INITIAL_VALUE.STRING,
+          tahunMasuk:
+            typeof rowData[3] === 'number'
+              ? rowData[3] || null
+              : INITIAL_VALUE.NUMBER,
+          major:
+            typeof rowData[4] === 'string'
+              ? (rowData[4].trim() as MajorEnum)
+              : null,
+          judulSkripsi:
+            typeof rowData[5] === 'string'
+              ? rowData[5].trim()
+              : INITIAL_VALUE.STRING,
+          abstract:
+            typeof rowData[6] === 'string'
+              ? rowData[6].trim()
+              : INITIAL_VALUE.STRING,
+          class:
+            typeof rowData[7] === 'string'
+              ? (rowData[7].trim() as ClassEnum)
+              : null,
+          imageUrl: DEFAULT.IMAGE_DEFAULT,
+          userId: userId.toString() as Uuid,
+        };
+
+        students.push(student as IStudent);
+      });
+
+      if (errors.length > 0) {
+        const errorMessage =
+          `Found ${errors.length} errors in the Excel file:\n` +
+          errors.map((e) => `Row ${e.row}: ${e.message}`).join('\n');
+        throw new BadRequestException(errorMessage);
+      }
+
       return await this.studentRepository.bulkCreate(students);
     } catch (err: unknown) {
       if (err instanceof Error)

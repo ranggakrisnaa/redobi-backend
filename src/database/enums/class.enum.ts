@@ -1,5 +1,5 @@
 export enum ClassEnum {
-  REGULAR = 'Regular',
-  REGULAR_MALAM = 'Regular Malam',
+  REGULER = 'Reguler',
+  REGULER_MALAM = 'Reguler Malam',
   Karyawan = 'Karyawan',
 }

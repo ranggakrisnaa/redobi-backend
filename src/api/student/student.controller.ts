@@ -62,7 +62,9 @@ export class StudentController {
     summary: 'Create Student',
   })
   @Post()
-  @UseInterceptors(FileInterceptor('file', new UploadService().multerOptions))
+  @UseInterceptors(
+    FileInterceptor('file', new UploadService().multerImageOptions),
+  )
   async Create(
     @Body() req: CreateStudentDto,
     @CurrentUser() userToken: JwtPayloadType,
@@ -76,7 +78,9 @@ export class StudentController {
     summary: 'Update Student',
   })
   @Put(':studentId')
-  @UseInterceptors(FileInterceptor('file', new UploadService().multerOptions))
+  @UseInterceptors(
+    FileInterceptor('file', new UploadService().multerImageOptions),
+  )
   async Update(
     @Body() req: UpdateStudentDto,
     @Param('studentId', ParseUUIDPipe) studentId: string,
@@ -111,10 +115,13 @@ export class StudentController {
     summary: 'Handle Excel Template',
   })
   @Post('templates')
-  @UseInterceptors(FileInterceptor('file', new UploadService().multerOptions))
+  @UseInterceptors(
+    FileInterceptor('file', new UploadService().multerExcelOptions),
+  )
   async handleExcelTemplate(
     @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() userToken: JwtPayloadType,
   ): Promise<IStudent[]> {
-    return await this.studentService.handleExcelTemplate(file);
+    return await this.studentService.handleExcelTemplate(file, userToken.id);
   }
 }
