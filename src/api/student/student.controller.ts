@@ -103,8 +103,8 @@ export class StudentController {
     summary: 'Generate Template Excel',
   })
   @Get('templates')
-  async generateTemplateExcel(@Res() res: Response) {
-    const bufferFile = await this.studentService.generateTemplateExcel();
+  async GenerateTemplateExcel(@Res() res: Response) {
+    const bufferFile = await this.studentService.GenerateTemplateExcel();
 
     res.setHeader('Content-Type', 'application/vnd.ms-excel');
     res.setHeader('Content-Disposition', 'attachment; filename=template.xlsx');
@@ -118,10 +118,10 @@ export class StudentController {
   @UseInterceptors(
     FileInterceptor('file', new UploadService().multerExcelOptions),
   )
-  async handleExcelTemplate(
+  async HandleExcelTemplate(
     @UploadedFile() file: Express.Multer.File,
     @CurrentUser() userToken: JwtPayloadType,
   ): Promise<IStudent[]> {
-    return await this.studentService.handleExcelTemplate(file, userToken.id);
+    return await this.studentService.HandleExcelTemplate(file, userToken.id);
   }
 }

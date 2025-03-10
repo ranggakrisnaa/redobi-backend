@@ -120,7 +120,7 @@ export class StudentService {
     }
   }
 
-  async generateTemplateExcel(): Promise<Buffer | ArrayBuffer> {
+  async GenerateTemplateExcel(): Promise<Buffer | ArrayBuffer> {
     const columns = [
       { header: 'Nama Mahasiswa', key: 'fullname' },
       { header: 'NIM', key: 'nim' },
@@ -139,7 +139,7 @@ export class StudentService {
     }
   }
 
-  async handleExcelTemplate(
+  async HandleExcelTemplate(
     file: Express.Multer.File,
     userId: string,
   ): Promise<IStudent[]> {
