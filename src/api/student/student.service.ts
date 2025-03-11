@@ -122,7 +122,7 @@ export class StudentService {
 
   async GenerateTemplateExcel(): Promise<Buffer | ArrayBuffer> {
     const columns = [
-      { header: 'Nama Mahasiswa', key: 'fullname' },
+      { header: 'Nama Mahasiswa', key: 'fullName' },
       { header: 'NIM', key: 'nim' },
       { header: 'Tahun Masuk', key: 'tahunMasuk' },
       { header: 'Jurusan', key: 'major' },
