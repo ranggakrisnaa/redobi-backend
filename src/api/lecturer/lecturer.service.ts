@@ -1,16 +1,20 @@
 import { Uuid } from '@/common/types/common.type';
-import { INITIAL_VALUE } from '@/constants/app.constant';
+import { DEFAULT, INITIAL_VALUE } from '@/constants/app.constant';
 import { TipePembimbingEnum } from '@/database/enums/tipe-pembimbing.enum';
 import { ILecturer } from '@/database/interface-model/lecturer-entity.interface';
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import * as ExcelJS from 'exceljs';
 import { ExcelJsService } from 'src/exceljs/excel-js.service';
 import { ColumnConfig } from 'src/exceljs/interface/excel-js.interface';
 import { ErrHandleExcel } from '../student/types/error-handle-excel.type';
+import { CreateLecturerDto } from './dto/create.dto';
+import { UpdateLecturerDto } from './dto/update.dto';
 import { LecturerRepository } from './lecturer.repository';
 
 @Injectable()
@@ -94,4 +98,74 @@ export class LecturerService {
         throw new InternalServerErrorException(err.message);
     }
   }
+
+  async Create(
+    req: CreateLecturerDto,
+    userId: string,
+    file: Express.Multer.File,
+  ): Promise<Partial<ILecturer>> {
+    const foundLecturer = await this.lecturerRepository.findOneBy({
+      nidn: req.nidn,
+    });
+
+    if (foundLecturer) {
+      throw new ForbiddenException('Lecturer data already exist.');
+    }
+
+    const imageUrl = file
+      ? `${DEFAULT.IMAGE_PATH}/${file.filename}`
+      : DEFAULT.IMAGE_DEFAULT;
+
+    try {
+      const newLecturer = this.lecturerRepository.create({
+        ...req,
+        imageUrl,
+        userId: userId.toString() as Uuid,
+      });
+
+      const data = await this.lecturerRepository.save(newLecturer);
+
+      return CreateLecturerDto.toPlainLecturer(data);
+    } catch (err: unknown) {
+      if (err instanceof Error)
+        throw new InternalServerErrorException(err.message);
+    }
+  }
+
+  async Update(
+    req: UpdateLecturerDto,
+    lecturerId: string,
+    file: Express.Multer.File,
+  ): Promise<Partial<ILecturer>> {
+    const foundLecturer = await this.lecturerRepository.findOneBy({
+      id: lecturerId.toString() as Uuid,
+    });
+
+    if (!foundLecturer) {
+      throw new NotFoundException('Lecturer data is not found.');
+    }
+
+    const imageUrl = file
+      ? `${DEFAULT.IMAGE_PATH}/${file.filename}`
+      : DEFAULT.IMAGE_DEFAULT;
+
+    try {
+      const data = await this.lecturerRepository.save({
+        ...req,
+        ...foundLecturer,
+        imageUrl,
+      });
+
+      return CreateLecturerDto.toPlainLecturer(data);
+    } catch (err: unknown) {
+      if (err instanceof Error)
+        throw new InternalServerErrorException(err.message);
+    }
+  }
+
+  async Pagination() {}
+
+  async Detail() {}
+
+  async Delete() {}
 }
