@@ -14,7 +14,9 @@ import {
 import * as ExcelJS from 'exceljs';
 import { ExcelJsService } from 'src/exceljs/excel-js.service';
 import { ColumnConfig } from 'src/exceljs/interface/excel-js.interface';
+import { In } from 'typeorm';
 import { CreateStudentDto } from './dto/create.dto';
+import { DeleteStudentDto } from './dto/delete.dto';
 import { StudentPaginationReqQuery } from './dto/query.req.dto';
 import { UpdateStudentDto } from './dto/update.dto';
 import { StudentRepository } from './student.repository';
@@ -104,16 +106,37 @@ export class StudentService {
     return foundStudent;
   }
 
-  async Delete(studentId: string): Promise<Partial<IStudent>> {
-    const foundStudent = await this.studentRepository.findOneBy({
-      id: studentId.toString() as Uuid,
-    });
-    if (!foundStudent) {
-      throw new NotFoundException('Student data not found.');
-    }
+  async Delete(
+    studentId: string,
+    req: DeleteStudentDto,
+  ): Promise<Partial<IStudent> | Partial<IStudent>[]> {
     try {
-      await this.studentRepository.softDelete(foundStudent.id);
-      return CreateStudentDto.toPlainStudent(foundStudent);
+      if (req.studentIds.length > 0) {
+        const foundStudents = await this.studentRepository.findBy({
+          id: In(req.studentIds),
+        });
+
+        if (!foundStudents.length) {
+          throw new NotFoundException('Student data not found.');
+        }
+
+        await this.studentRepository.bulkDelete(req.studentIds);
+
+        return foundStudents.map((student) =>
+          CreateStudentDto.toPlainStudent(student),
+        );
+      } else {
+        const foundStudent = await this.studentRepository.findOneBy({
+          id: studentId.toString() as Uuid,
+        });
+
+        if (!foundStudent) {
+          throw new NotFoundException('Student data not found.');
+        }
+
+        await this.studentRepository.softDelete(foundStudent.id);
+        return CreateStudentDto.toPlainStudent(foundStudent);
+      }
     } catch (err: unknown) {
       if (err instanceof Error)
         throw new InternalServerErrorException(err.message);

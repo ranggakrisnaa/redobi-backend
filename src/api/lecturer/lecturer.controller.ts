@@ -1,3 +1,4 @@
+import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
 import { ILecturer } from '@/database/interface-model/lecturer-entity.interface';
 import { CurrentUser } from '@/decorators/current-user.decorator';
 import { ApiPublic } from '@/decorators/http.decorators';
@@ -11,20 +12,28 @@ import {
   ParseUUIDPipe,
   Post,
   Put,
+  Query,
   Res,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { UploadService } from 'src/upload/upload.service';
 import { JwtPayloadType } from '../auth/types/jwt-payload.type';
 import { CreateLecturerDto } from './dto/create.dto';
+import { DeleteLecturerDto } from './dto/delete.dto';
+import { LecturerPaginationReqQuery } from './dto/query.dto';
 import { UpdateLecturerDto } from './dto/update.dto';
 import { LecturerService } from './lecturer.service';
 
-@Controller('lecturer')
+@ApiTags('lecturers')
+@Controller({
+  path: 'lecturers',
+  version: '1',
+})
 @UseGuards(AuthGuard)
 export class LecturerController {
   constructor(private readonly lecturerService: LecturerService) {}
@@ -32,12 +41,15 @@ export class LecturerController {
   @ApiPublic({
     summary: 'Generate Template Excel',
   })
-  @Get()
+  @Get('templates')
   async GenerateTemplateExcel(@Res() res: Response) {
     const bufferFile = await this.lecturerService.GenerateTemplateExcel();
 
     res.setHeader('Content-Type', 'application/vnd.ms-excel');
-    res.setHeader('Content-Disposition', 'attachment; filename=template.xlsx');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=template_dosen-pembimbing.xlsx',
+    );
     res.send(bufferFile);
   }
 
@@ -89,17 +101,30 @@ export class LecturerController {
     summary: 'Pagination lecturer',
   })
   @Get()
-  async Pagination() {}
+  async Pagination(
+    @Query() reqQuery: LecturerPaginationReqQuery,
+  ): Promise<OffsetPaginatedDto<ILecturer>> {
+    return await this.lecturerService.Pagination(reqQuery);
+  }
 
   @ApiPublic({
     summary: 'Detail lecturer',
   })
-  @Get()
-  async Detail() {}
+  @Get(':lecturerId')
+  async Detail(
+    @Param('lecturerId', ParseUUIDPipe) lecturerId: string,
+  ): Promise<ILecturer> {
+    return await this.lecturerService.Detail(lecturerId);
+  }
 
   @ApiPublic({
     summary: 'Delete lecturer',
   })
-  @Delete()
-  async Delete() {}
+  @Delete(':lecturerId')
+  async Delete(
+    @Param('lecturerId') lecturerId: string,
+    @Body() req: DeleteLecturerDto,
+  ): Promise<Partial<ILecturer> | Partial<ILecturer>[]> {
+    return await this.lecturerService.Delete(lecturerId, req);
+  }
 }

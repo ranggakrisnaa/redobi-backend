@@ -1,7 +1,12 @@
 import { Uuid } from '@/common/types/common.type';
 import { TipePembimbingEnum } from '@/database/enums/tipe-pembimbing.enum';
 import { ILecturer } from '@/database/interface-model/lecturer-entity.interface';
-import { EnumField, StringField } from '@/decorators/field.decorators';
+import {
+  EnumField,
+  NumberFieldOptional,
+  StringField,
+  StringFieldOptional,
+} from '@/decorators/field.decorators';
 
 export class CreateLecturerDto {
   id: Uuid;
@@ -15,10 +20,13 @@ export class CreateLecturerDto {
   @StringField()
   fullName: string;
 
+  @NumberFieldOptional()
+  jumlahBimbingan: number;
+
   @EnumField(() => TipePembimbingEnum)
   tipePembimbing: TipePembimbingEnum;
 
-  @StringField()
+  @StringFieldOptional()
   imageUrl: string;
 
   static toPlainLecturer(dto: CreateLecturerDto): Partial<ILecturer> {

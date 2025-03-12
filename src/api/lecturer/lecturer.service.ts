@@ -1,3 +1,4 @@
+import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
 import { Uuid } from '@/common/types/common.type';
 import { DEFAULT, INITIAL_VALUE } from '@/constants/app.constant';
 import { TipePembimbingEnum } from '@/database/enums/tipe-pembimbing.enum';
@@ -12,8 +13,11 @@ import {
 import * as ExcelJS from 'exceljs';
 import { ExcelJsService } from 'src/exceljs/excel-js.service';
 import { ColumnConfig } from 'src/exceljs/interface/excel-js.interface';
+import { In } from 'typeorm';
 import { ErrHandleExcel } from '../student/types/error-handle-excel.type';
 import { CreateLecturerDto } from './dto/create.dto';
+import { DeleteLecturerDto } from './dto/delete.dto';
+import { LecturerPaginationReqQuery } from './dto/query.dto';
 import { UpdateLecturerDto } from './dto/update.dto';
 import { LecturerRepository } from './lecturer.repository';
 
@@ -79,6 +83,8 @@ export class LecturerService {
             typeof rowData[3] === 'string'
               ? (rowData[3].trim() as TipePembimbingEnum)
               : null,
+          jumlahBimbingan: INITIAL_VALUE.NUMBER,
+          imageUrl: DEFAULT.IMAGE_DEFAULT,
           userId: userId.toString() as Uuid,
         };
 
@@ -116,10 +122,13 @@ export class LecturerService {
       ? `${DEFAULT.IMAGE_PATH}/${file.filename}`
       : DEFAULT.IMAGE_DEFAULT;
 
+    const jumlahBimbingan = req.jumlahBimbingan ?? INITIAL_VALUE.NUMBER;
+
     try {
       const newLecturer = this.lecturerRepository.create({
         ...req,
         imageUrl,
+        jumlahBimbingan,
         userId: userId.toString() as Uuid,
       });
 
@@ -147,13 +156,22 @@ export class LecturerService {
 
     const imageUrl = file
       ? `${DEFAULT.IMAGE_PATH}/${file.filename}`
-      : DEFAULT.IMAGE_DEFAULT;
+      : foundLecturer
+        ? foundLecturer.imageUrl
+        : DEFAULT.IMAGE_DEFAULT;
+
+    const jumlahBimbingan = req.jumlahBimbingan
+      ? req.jumlahBimbingan
+      : foundLecturer
+        ? foundLecturer.jumlahBimbingan
+        : INITIAL_VALUE.NUMBER;
 
     try {
       const data = await this.lecturerRepository.save({
         ...req,
         ...foundLecturer,
         imageUrl,
+        jumlahBimbingan,
       });
 
       return CreateLecturerDto.toPlainLecturer(data);
@@ -163,9 +181,55 @@ export class LecturerService {
     }
   }
 
-  async Pagination() {}
+  async Pagination(
+    reqQuery: LecturerPaginationReqQuery,
+  ): Promise<OffsetPaginatedDto<ILecturer>> {
+    return this.lecturerRepository.Pagination(reqQuery);
+  }
 
-  async Detail() {}
+  async Detail(lecturerId: string): Promise<ILecturer> {
+    const foundLecturer = await this.lecturerRepository.findOneBy({
+      id: lecturerId.toString() as Uuid,
+    });
 
-  async Delete() {}
+    if (!foundLecturer) {
+      throw new NotFoundException('Lecturer data is not found.');
+    }
+
+    return foundLecturer;
+  }
+
+  async Delete(
+    lecturerId: string,
+    req: DeleteLecturerDto,
+  ): Promise<Partial<ILecturer> | Partial<ILecturer>[]> {
+    console.log(req.lecturerIds);
+
+    if (req?.lecturerIds.length > 0) {
+      const foundLecturers = await this.lecturerRepository.findBy({
+        id: In(req.lecturerIds),
+      });
+
+      if (!foundLecturers.length) {
+        throw new NotFoundException('Lecturer data not found.');
+      }
+
+      await this.lecturerRepository.bulkDelete(req.lecturerIds);
+
+      return foundLecturers.map((lecturer) =>
+        CreateLecturerDto.toPlainLecturer(lecturer),
+      );
+    } else {
+      const foundLecturer = await this.lecturerRepository.findOneBy({
+        id: lecturerId.toString() as Uuid,
+      });
+
+      if (!foundLecturer) {
+        throw new NotFoundException('Lect urer data is not found.');
+      }
+
+      await this.lecturerRepository.softDelete(foundLecturer.id);
+      return CreateLecturerDto.toPlainLecturer(foundLecturer);
+    }
+  }
 }

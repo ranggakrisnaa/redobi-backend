@@ -9,6 +9,7 @@ import { ExcelJsService } from 'src/exceljs/excel-js.service';
 import { AuthService } from '../auth/auth.service';
 import { SessionRepository } from '../session/session.repository';
 import { LecturerController } from './lecturer.controller';
+import { LecturerRepository } from './lecturer.repository';
 import { LecturerService } from './lecturer.service';
 
 @Module({
@@ -23,6 +24,7 @@ import { LecturerService } from './lecturer.service';
     AuthService,
     JwtService,
     SessionRepository,
+    LecturerRepository,
   ],
 })
 export class LecturerModule {}
