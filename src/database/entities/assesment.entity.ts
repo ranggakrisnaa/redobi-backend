@@ -7,6 +7,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Uuid } from '../../common/types/common.type';
+import { IAssessment } from '../interface-model/assessment-entity.interface';
 import { ICriteria } from '../interface-model/criteria-entity.interface';
 import { ILecturer } from '../interface-model/lecturer-entity.interface';
 import { ISubCriteria } from '../interface-model/sub-criteria-entity.entity';
@@ -19,7 +20,7 @@ import { SubCriteriaEntity } from './sub-criteria.entity';
   imports: [forwardRef(() => LecturerEntity)],
 })
 @Entity('assessments')
-export class AssessmentEntity extends AbstractEntity {
+export class AssessmentEntity extends AbstractEntity implements IAssessment {
   @PrimaryGeneratedColumn('increment', {
     primaryKeyConstraintName: 'PK_assessments_id',
   })
