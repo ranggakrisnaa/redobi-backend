@@ -89,7 +89,7 @@ async function bootstrap() {
   app.enableShutdownHooks();
 
   try {
-    await app.listen(port);
+    await app.listen(port ?? 3000);
     console.info(`Server running on port ${port}`);
   } catch (error) {
     console.error('Failed to start server:', error);
