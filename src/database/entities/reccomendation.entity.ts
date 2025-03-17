@@ -7,13 +7,17 @@ import {
 } from 'typeorm';
 import { Uuid } from '../../common/types/common.type';
 import { ILecturer } from '../interface-model/lecturer-entity.interface';
+import { IReccomendation } from '../interface-model/reccomendation-entity.interface';
 import { IStudent } from '../interface-model/student-entity.interface';
 import { AbstractEntity } from './abstract.entity';
 import { LecturerEntity } from './lecturer.entity';
 import { StudentEntity } from './student.entity';
 
 @Entity('reccomendations')
-export class ReccomendationEntity extends AbstractEntity {
+export class ReccomendationEntity
+  extends AbstractEntity
+  implements IReccomendation
+{
   @PrimaryGeneratedColumn('increment', {
     primaryKeyConstraintName: 'PK_reccomendations_id',
   })

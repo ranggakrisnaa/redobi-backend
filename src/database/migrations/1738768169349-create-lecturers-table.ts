@@ -11,6 +11,7 @@ export class CreateLecturersTable1738768169349 implements MigrationInterface {
             CREATE TABLE "lecturers" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "full_name" character varying(200) NOT NULL,
+                "nidn" character varying(200) NOT NULL,
                 "jumlah_bimbingan" integer NOT NULL,
                 "tipe_pembimbing" "public"."lecturers_tipe_pembimbing_enum" NOT NULL,
                 "image_url" text NOT NULL,

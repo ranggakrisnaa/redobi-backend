@@ -6,8 +6,8 @@ import { ISubCriteria } from './sub-criteria-entity.entity';
 export interface IAssessment extends IBaseEntity {
   id: number;
   lecturerId: string;
-  criteriaId: string;
-  subCriteriaId: string;
+  criteriaId: number;
+  subCriteriaId: number;
   score: number;
   lecturer?: ILecturer;
   criteria?: ICriteria;

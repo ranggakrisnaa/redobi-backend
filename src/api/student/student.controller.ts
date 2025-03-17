@@ -24,6 +24,7 @@ import { Response } from 'express';
 import { UploadService } from 'src/upload/upload.service';
 import { JwtPayloadType } from '../auth/types/jwt-payload.type';
 import { CreateStudentDto } from './dto/create.dto';
+import { DeleteStudentDto } from './dto/delete.dto';
 import { StudentPaginationReqQuery } from './dto/query.req.dto';
 import { UpdateStudentDto } from './dto/update.dto';
 import { StudentService } from './student.service';
@@ -45,6 +46,21 @@ export class StudentController {
     @Query() reqQuery: StudentPaginationReqQuery,
   ): Promise<OffsetPaginatedDto<IStudent>> {
     return await this.studentService.Pagination(reqQuery);
+  }
+
+  @ApiPublic({
+    summary: 'Generate Template Excel',
+  })
+  @Get('templates')
+  async GenerateTemplateExcel(@Res() res: Response) {
+    const bufferFile = await this.studentService.GenerateTemplateExcel();
+
+    res.setHeader('Content-Type', 'application/vnd.ms-excel');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=template_mahasiswa.xlsx',
+    );
+    res.send(bufferFile);
   }
 
   @ApiPublic({
@@ -95,20 +111,9 @@ export class StudentController {
   @Delete(':studentId')
   async Delete(
     @Param('studentId', ParseUUIDPipe) studentId: string,
-  ): Promise<Partial<IStudent>> {
-    return await this.studentService.Delete(studentId);
-  }
-
-  @ApiPublic({
-    summary: 'Generate Template Excel',
-  })
-  @Get('templates')
-  async generateTemplateExcel(@Res() res: Response) {
-    const bufferFile = await this.studentService.generateTemplateExcel();
-
-    res.setHeader('Content-Type', 'application/vnd.ms-excel');
-    res.setHeader('Content-Disposition', 'attachment; filename=template.xlsx');
-    res.send(bufferFile);
+    @Body() req: DeleteStudentDto,
+  ): Promise<Partial<IStudent> | Partial<IStudent>[]> {
+    return await this.studentService.Delete(studentId, req);
   }
 
   @ApiPublic({
@@ -118,10 +123,10 @@ export class StudentController {
   @UseInterceptors(
     FileInterceptor('file', new UploadService().multerExcelOptions),
   )
-  async handleExcelTemplate(
+  async HandleExcelTemplate(
     @UploadedFile() file: Express.Multer.File,
     @CurrentUser() userToken: JwtPayloadType,
   ): Promise<IStudent[]> {
-    return await this.studentService.handleExcelTemplate(file, userToken.id);
+    return await this.studentService.HandleExcelTemplate(file, userToken.id);
   }
 }

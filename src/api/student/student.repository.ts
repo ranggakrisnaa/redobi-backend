@@ -5,7 +5,7 @@ import { StudentEntity } from '@/database/entities/student.entity';
 import { IStudent } from '@/database/interface-model/student-entity.interface';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { StudentPaginationReqQuery } from './dto/query.req.dto';
 
 @Injectable()
@@ -71,7 +71,7 @@ export class StudentRepository extends Repository<StudentEntity> {
     });
 
     return {
-      data: data,
+      data,
       pagination: metaDto,
     };
   }
@@ -83,5 +83,11 @@ export class StudentRepository extends Repository<StudentEntity> {
 
     const students = this.repo.create(data);
     return await this.repo.save(students);
+  }
+
+  async bulkDelete(studentIds: string[]): Promise<void> {
+    this.repo.softDelete({
+      id: In(studentIds),
+    });
   }
 }

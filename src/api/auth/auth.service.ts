@@ -200,7 +200,6 @@ export class AuthService {
       await this.jwtService.signAsync(
         {
           sessionId: data.sessionId,
-          hash: data.hash,
         },
         {
           secret: this.configService.getOrThrow('auth.refreshSecret', {

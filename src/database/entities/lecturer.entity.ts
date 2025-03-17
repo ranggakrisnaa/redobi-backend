@@ -28,6 +28,9 @@ export class LecturerEntity extends AbstractEntity implements ILecturer {
   @Column({ type: 'varchar', length: 200, name: 'full_name' })
   fullName: string;
 
+  @Column({ type: 'varchar', length: 200 })
+  nidn: string;
+
   @Column({ type: 'int', name: 'jumlah_bimbingan' })
   jumlahBimbingan: number;
 
