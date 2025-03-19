@@ -19,8 +19,8 @@ export class SessionEntity extends AbstractEntity implements ISession {
   })
   id: Uuid;
 
-  @Column({ type: 'varchar', length: 255, name: 'hash_token' })
-  hashToken: string;
+  @Column({ type: 'varchar', length: 255, name: 'refresh_token' })
+  refreshToken: string;
 
   @Column({ type: 'int', name: 'otp_code' })
   otpCode: number;

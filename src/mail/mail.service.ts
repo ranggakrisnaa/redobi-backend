@@ -24,4 +24,19 @@ export class MailService {
       },
     });
   }
+
+  async sendEmailOTPCode(email: string, otpCode: number) {
+    const url = `${this.configService.get('app.frontendUrl', { infer: true })}`;
+
+    await this.mailerService.sendMail({
+      to: email,
+      subject: 'Email Verification',
+      template: 'email-otp',
+      context: {
+        email,
+        otpCode,
+        url,
+      },
+    });
+  }
 }

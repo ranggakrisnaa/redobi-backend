@@ -21,7 +21,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
-import { UploadService } from 'src/upload/upload.service';
+import { MulterService } from '../../multer/multer.service';
 import { JwtPayloadType } from '../auth/types/jwt-payload.type';
 import { CreateLecturerDto } from './dto/create.dto';
 import { DeleteLecturerDto } from './dto/delete.dto';
@@ -58,7 +58,7 @@ export class LecturerController {
   })
   @Post('templates')
   @UseInterceptors(
-    FileInterceptor('file', new UploadService().multerExcelOptions),
+    FileInterceptor('file', new MulterService().multerExcelOptions),
   )
   async HandleExcelTemplate(
     @UploadedFile() file: Express.Multer.File,
@@ -72,7 +72,7 @@ export class LecturerController {
   })
   @Post()
   @UseInterceptors(
-    FileInterceptor('file', new UploadService().multerImageOptions),
+    FileInterceptor('file', new MulterService().multerImageOptions),
   )
   async Create(
     @Body() req: CreateLecturerDto,
@@ -87,7 +87,7 @@ export class LecturerController {
   })
   @Put(':lecturerId')
   @UseInterceptors(
-    FileInterceptor('file', new UploadService().multerImageOptions),
+    FileInterceptor('file', new MulterService().multerImageOptions),
   )
   async Update(
     @Body() req: UpdateLecturerDto,

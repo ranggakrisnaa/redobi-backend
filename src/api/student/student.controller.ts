@@ -21,7 +21,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
-import { UploadService } from 'src/upload/upload.service';
+import { MulterService } from '../../multer/multer.service';
 import { JwtPayloadType } from '../auth/types/jwt-payload.type';
 import { CreateStudentDto } from './dto/create.dto';
 import { DeleteStudentDto } from './dto/delete.dto';
@@ -79,7 +79,7 @@ export class StudentController {
   })
   @Post()
   @UseInterceptors(
-    FileInterceptor('file', new UploadService().multerImageOptions),
+    FileInterceptor('file', new MulterService().multerImageOptions),
   )
   async Create(
     @Body() req: CreateStudentDto,
@@ -95,7 +95,7 @@ export class StudentController {
   })
   @Put(':studentId')
   @UseInterceptors(
-    FileInterceptor('file', new UploadService().multerImageOptions),
+    FileInterceptor('file', new MulterService().multerImageOptions),
   )
   async Update(
     @Body() req: UpdateStudentDto,
@@ -121,7 +121,7 @@ export class StudentController {
   })
   @Post('templates')
   @UseInterceptors(
-    FileInterceptor('file', new UploadService().multerExcelOptions),
+    FileInterceptor('file', new MulterService().multerExcelOptions),
   )
   async HandleExcelTemplate(
     @UploadedFile() file: Express.Multer.File,

@@ -4,4 +4,5 @@ export interface IEmailJob {
 
 export interface IVerifyEmailJob extends IEmailJob {
   token: string;
+  otpCode: number;
 }
