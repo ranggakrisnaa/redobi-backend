@@ -2,11 +2,11 @@ import { NumberField, StringField } from '@/decorators/field.decorators';
 
 export class RefreshResDto {
   @StringField()
-  accessToken!: string;
+  accessToken: string;
 
   @StringField()
-  refreshToken!: string;
+  refreshToken: string;
 
   @NumberField()
-  tokenExpires!: number;
+  tokenExpires: number;
 }

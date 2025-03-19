@@ -29,16 +29,18 @@ export class AuthGuard implements CanActivate {
 
     const payload = await this.verifyAccessToken(accessToken);
     try {
+      console.log(payload.id);
       const session = await this.sessionRepository.findOneBy({
         userId: payload.id as Uuid,
       });
 
-      if (!session) {
+      if (!session || session.accessToken !== accessToken) {
         throw new UnauthorizedException('Invalid or expired token');
       }
 
       request['user'] = payload;
-    } catch {
+    } catch (err) {
+      console.log(err);
       throw new UnauthorizedException('Invalid authentication');
     }
 

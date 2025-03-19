@@ -1,6 +1,8 @@
 import { RefreshReqDto } from '@/api/auth/dto/refresh.dto';
+import { RegisterDto } from '@/api/auth/dto/register.dto';
 import { Token } from '@/common/types/common.type';
 import { ISession } from '@/database/interface-model/session-entity.interface';
+import { IUser } from '@/database/interface-model/user-entity.interface';
 import { CurrentUser } from '@/decorators/current-user.decorator';
 import { ApiAuth, ApiPublic } from '@/decorators/http.decorators';
 import { AuthGuard } from '@/guards/auth.guard';
@@ -19,6 +21,15 @@ import { SignInResponse } from './types/sign-in-response.type';
 })
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @ApiPublic({
+    type: RegisterDto,
+    summary: 'Sign up',
+  })
+  @Post('register')
+  async SignUp(@Body() req: RegisterDto): Promise<Partial<IUser>> {
+    return await this.authService.SignUp(req);
+  }
 
   @ApiPublic({
     type: LoginReqDto,
@@ -43,6 +54,7 @@ export class AuthController {
     summary: 'Refresh Token',
   })
   @Post('refresh')
+  @UseGuards(AuthGuard)
   async RefreshToken(@Body() req: RefreshReqDto): Promise<Token> {
     return await this.authService.RefreshToken(req);
   }
