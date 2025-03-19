@@ -1,7 +1,7 @@
 import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
 import { IStudent } from '@/database/interface-model/student-entity.interface';
 import { CurrentUser } from '@/decorators/current-user.decorator';
-import { ApiPublic } from '@/decorators/http.decorators';
+import { ApiAuth } from '@/decorators/http.decorators';
 import { AuthGuard } from '@/guards/auth.guard';
 import {
   Body,
@@ -38,7 +38,7 @@ import { StudentService } from './student.service';
 export class StudentController {
   constructor(private readonly studentService: StudentService) {}
 
-  @ApiPublic({
+  @ApiAuth({
     summary: 'Pagination Student',
   })
   @Get()
@@ -48,7 +48,7 @@ export class StudentController {
     return await this.studentService.Pagination(reqQuery);
   }
 
-  @ApiPublic({
+  @ApiAuth({
     summary: 'Generate Template Excel',
   })
   @Get('templates')
@@ -63,7 +63,7 @@ export class StudentController {
     res.send(bufferFile);
   }
 
-  @ApiPublic({
+  @ApiAuth({
     summary: 'Get Student By Id',
   })
   @Get(':studentId')
@@ -73,7 +73,7 @@ export class StudentController {
     return await this.studentService.Detail(studentId);
   }
 
-  @ApiPublic({
+  @ApiAuth({
     type: CreateStudentDto,
     summary: 'Create Student',
   })
@@ -89,7 +89,7 @@ export class StudentController {
     return await this.studentService.Create(req, userToken.id, file);
   }
 
-  @ApiPublic({
+  @ApiAuth({
     type: UpdateStudentDto,
     summary: 'Update Student',
   })
@@ -105,7 +105,7 @@ export class StudentController {
     return await this.studentService.Update(req, studentId, file);
   }
 
-  @ApiPublic({
+  @ApiAuth({
     summary: 'Delete Student',
   })
   @Delete(':studentId')
@@ -116,7 +116,7 @@ export class StudentController {
     return await this.studentService.Delete(studentId, req);
   }
 
-  @ApiPublic({
+  @ApiAuth({
     summary: 'Handle Excel Template',
   })
   @Post('templates')

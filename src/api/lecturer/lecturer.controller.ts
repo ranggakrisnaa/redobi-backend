@@ -1,7 +1,7 @@
 import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
 import { ILecturer } from '@/database/interface-model/lecturer-entity.interface';
 import { CurrentUser } from '@/decorators/current-user.decorator';
-import { ApiPublic } from '@/decorators/http.decorators';
+import { ApiAuth } from '@/decorators/http.decorators';
 import { AuthGuard } from '@/guards/auth.guard';
 import {
   Body,
@@ -38,7 +38,7 @@ import { LecturerService } from './lecturer.service';
 export class LecturerController {
   constructor(private readonly lecturerService: LecturerService) {}
 
-  @ApiPublic({
+  @ApiAuth({
     summary: 'Generate Template Excel',
   })
   @Get('templates')
@@ -53,7 +53,7 @@ export class LecturerController {
     res.send(bufferFile);
   }
 
-  @ApiPublic({
+  @ApiAuth({
     summary: 'Handle Excel Template',
   })
   @Post('templates')
@@ -67,7 +67,7 @@ export class LecturerController {
     return await this.lecturerService.HandleExcelTemplate(file, userToken.id);
   }
 
-  @ApiPublic({
+  @ApiAuth({
     summary: 'Create lecturer',
   })
   @Post()
@@ -82,7 +82,7 @@ export class LecturerController {
     return await this.lecturerService.Create(req, userToken.id, file);
   }
 
-  @ApiPublic({
+  @ApiAuth({
     summary: 'Update lecturer',
   })
   @Put(':lecturerId')
@@ -97,7 +97,7 @@ export class LecturerController {
     return await this.lecturerService.Update(req, lecturerId, file);
   }
 
-  @ApiPublic({
+  @ApiAuth({
     summary: 'Pagination lecturer',
   })
   @Get()
@@ -107,7 +107,7 @@ export class LecturerController {
     return await this.lecturerService.Pagination(reqQuery);
   }
 
-  @ApiPublic({
+  @ApiAuth({
     summary: 'Detail lecturer',
   })
   @Get(':lecturerId')
@@ -117,7 +117,7 @@ export class LecturerController {
     return await this.lecturerService.Detail(lecturerId);
   }
 
-  @ApiPublic({
+  @ApiAuth({
     summary: 'Delete lecturer',
   })
   @Delete(':lecturerId')
