@@ -1,3 +1,4 @@
+import { RefreshReqDto } from '@/api/auth/dto/refresh.dto';
 import { Token } from '@/common/types/common.type';
 import { ISession } from '@/database/interface-model/session-entity.interface';
 import { CurrentUser } from '@/decorators/current-user.decorator';
@@ -37,10 +38,19 @@ export class AuthController {
     return await this.authService.VerifySignIn(req);
   }
 
+  @ApiPublic({
+    type: RefreshReqDto,
+    summary: 'Refresh Token',
+  })
+  @Post('refresh')
+  async RefreshToken(@Body() req: RefreshReqDto): Promise<Token> {
+    return await this.authService.RefreshToken(req);
+  }
+
   @ApiAuth()
   @Post('logout')
   @UseGuards(AuthGuard)
-  async logout(
+  async Logout(
     @CurrentUser() userToken: JwtPayloadType,
   ): Promise<Partial<ISession>> {
     return await this.authService.Logout(userToken.id);

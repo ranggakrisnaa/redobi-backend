@@ -1,3 +1,4 @@
+import { RefreshReqDto } from '@/api/auth/dto/refresh.dto';
 import { IEmailJob, IVerifyEmailJob } from '@/common/interfaces/job.interface';
 import { Token, Uuid } from '@/common/types/common.type';
 import { AllConfigType } from '@/config/config.type';
@@ -76,6 +77,7 @@ export class AuthService {
         foundUser.id,
         {
           otpCode,
+          validOtpUntil: new Date(Date.now() + 10 * 60 * 1000),
         },
       );
 
@@ -113,6 +115,10 @@ export class AuthService {
 
     if (foundSession.isLimit) {
       throw new UnauthorizedException('Account temporarily locked');
+    }
+
+    if (foundSession.validOtpUntil < now) {
+      throw new UnauthorizedException('OTP expired');
     }
 
     if (foundSession.otpCode !== reqBody.otpCode) {
@@ -218,6 +224,31 @@ export class AuthService {
       refreshToken,
       tokenExpires,
     } as Token;
+  }
+
+  async RefreshToken(req: RefreshReqDto): Promise<Token> {
+    const foundSession = await this.sessionRepository.findOneBy({
+      refreshToken: req.refreshToken,
+    });
+    if (!foundSession) {
+      throw new UnauthorizedException('Session is not found.');
+    }
+
+    const verifyToken = await this.jwtService.verifyAsync(req.refreshToken, {
+      secret: this.configService.getOrThrow('auth.refreshSecret', {
+        infer: true,
+      }),
+    });
+
+    const foundUser = await this.sessionRepository.findOneBy({
+      id: verifyToken.id as Uuid,
+    });
+
+    return this.createToken({
+      id: foundUser.id,
+      sessionId: foundSession.id,
+      hash: foundSession.refreshToken,
+    });
   }
 
   async Logout(userId: string): Promise<Partial<ISession>> {
