@@ -28,6 +28,13 @@ export class SessionEntity extends AbstractEntity implements ISession {
   @Column({ type: 'int', name: 'otp_trial' })
   otpTrial: number;
 
+  @Column({
+    name: 'valid_otp_until',
+    type: 'timestamptz',
+    nullable: true,
+  })
+  validOtpUntil: Date;
+
   @Column({ type: 'bool', name: 'is_limit', default: false })
   isLimit: boolean;
 
