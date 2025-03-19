@@ -4,7 +4,7 @@ import { IUser } from './user-entity.interface';
 
 export interface ISession extends IBaseEntity {
   id: Uuid;
-  hashToken: string;
+  refreshToken: string;
   otpCode: number;
   otpTrial: number;
   isLimit: boolean;

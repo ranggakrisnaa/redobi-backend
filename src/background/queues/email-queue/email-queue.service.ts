@@ -5,11 +5,15 @@ import { Injectable, Logger } from '@nestjs/common';
 @Injectable()
 export class EmailQueueService {
   private readonly logger = new Logger(EmailQueueService.name);
-
   constructor(private readonly mailService: MailService) {}
 
   async sendEmailVerification(data: IVerifyEmailJob): Promise<void> {
     this.logger.debug(`Sending email verification to ${data.email}`);
     await this.mailService.sendEmailVerification(data.email, data.token);
+  }
+
+  async sendEmailOTPCode(data: IVerifyEmailJob): Promise<void> {
+    this.logger.debug(`Sending email verification to ${data.email}`);
+    await this.mailService.sendEmailOTPCode(data.email, data.otpCode);
   }
 }

@@ -50,6 +50,10 @@ class EnvironmentVariablesValidator {
 
   @IsString()
   @IsOptional()
+  FRONTEND_URL: string;
+
+  @IsString()
+  @IsOptional()
   APP_FALLBACK_LANGUAGE: string;
 
   @IsString()
@@ -84,6 +88,7 @@ export default registerAs<AppConfig>('app', () => {
     name: process.env.APP_NAME || 'app',
     url: process.env.APP_URL || `http://localhost:${port}`,
     port,
+    frontendUrl: process.env.FRONTEND_URL,
     debug: process.env.APP_DEBUG === 'true',
     apiPrefix: process.env.API_PREFIX || 'api',
     fallbackLanguage: process.env.APP_FALLBACK_LANGUAGE || 'en',

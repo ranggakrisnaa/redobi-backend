@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OTP Verification - Redobi Backend</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            text-align: center;
+            padding: 20px;
+        }
+        .container {
+            background-color: #ffffff;
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        .logo {
+            max-width: 120px;
+            margin-bottom: 20px;
+        }
+        .title {
+            font-size: 22px;
+            font-weight: bold;
+            color: #1a237e;
+        }
+        .otp {
+            font-size: 28px;
+            font-weight: bold;
+            color: #e63946;
+            letter-spacing: 10px;
+            background: #f0f0f0;
+            padding: 10px;
+            display: inline-block;
+            border-radius: 5px;
+        }
+        .message {
+            font-size: 16px;
+            color: #333;
+            margin: 20px 0;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #777;
+        }
+        .button {
+            display: inline-block;
+            background-color: #1a73e8;
+            color: #ffffff;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src="https://res.cloudinary.com/dbuyqvhts/image/upload/v1742373607/uploads/srmhtilkvur5scvvqjct.png" alt="Redobi Logo" class="logo">
+        <h2 class="title">Kode OTP Login</h2>
+        <p class="message">Kode verifikasi telah dikirim ke email Anda.</p>
+        <p class="otp">{{otpCode}}</p>
+        <p class="message">Kode ini berlaku selama 10 menit. Jangan bagikan kepada siapa pun.</p>
+        <a href={{url}} class="button">Verifikasi Sekarang</a>
+        <div class="footer">
+            <p>&copy; 2025 Redobi Backend. All Rights Reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,6 +1,6 @@
 import multer, { diskStorage } from 'multer';
 
-export class UploadService {
+export class MulterService {
   public readonly multerImageOptions = {
     storage: diskStorage({
       destination: './uploads/images',

@@ -38,8 +38,9 @@ export class LecturerService {
     try {
       return await this.exceljsService.generateExcel(columns, []);
     } catch (err: unknown) {
-      if (err instanceof Error)
-        throw new InternalServerErrorException(err.message);
+      throw new InternalServerErrorException(
+        err instanceof Error ? err.message : 'Unexpected error',
+      );
     }
   }
 
@@ -77,7 +78,7 @@ export class LecturerService {
               : INITIAL_VALUE.STRING,
           nidn:
             typeof rowData[2] === 'number'
-              ? rowData[2].toString()
+              ? (rowData[2] as unknown as string)
               : INITIAL_VALUE.STRING,
           tipePembimbing:
             typeof rowData[3] === 'string'
@@ -85,7 +86,7 @@ export class LecturerService {
               : null,
           jumlahBimbingan: INITIAL_VALUE.NUMBER,
           imageUrl: DEFAULT.IMAGE_DEFAULT,
-          userId: userId.toString() as Uuid,
+          userId: userId as Uuid,
         };
 
         lecturers.push(lecturer as ILecturer);
@@ -100,8 +101,9 @@ export class LecturerService {
 
       return await this.lecturerRepository.bulkCreate(lecturers);
     } catch (err: unknown) {
-      if (err instanceof Error)
-        throw new InternalServerErrorException(err.message);
+      throw new InternalServerErrorException(
+        err instanceof Error ? err.message : 'Unexpected error',
+      );
     }
   }
 
@@ -129,15 +131,16 @@ export class LecturerService {
         ...req,
         imageUrl,
         jumlahBimbingan,
-        userId: userId.toString() as Uuid,
+        userId: userId as Uuid,
       });
 
       const data = await this.lecturerRepository.save(newLecturer);
 
       return CreateLecturerDto.toPlainLecturer(data);
     } catch (err: unknown) {
-      if (err instanceof Error)
-        throw new InternalServerErrorException(err.message);
+      throw new InternalServerErrorException(
+        err instanceof Error ? err.message : 'Unexpected error',
+      );
     }
   }
 
@@ -147,7 +150,7 @@ export class LecturerService {
     file: Express.Multer.File,
   ): Promise<Partial<ILecturer>> {
     const foundLecturer = await this.lecturerRepository.findOneBy({
-      id: lecturerId.toString() as Uuid,
+      id: lecturerId as Uuid,
     });
 
     if (!foundLecturer) {
@@ -176,8 +179,9 @@ export class LecturerService {
 
       return CreateLecturerDto.toPlainLecturer(data);
     } catch (err: unknown) {
-      if (err instanceof Error)
-        throw new InternalServerErrorException(err.message);
+      throw new InternalServerErrorException(
+        err instanceof Error ? err.message : 'Unexpected error',
+      );
     }
   }
 
@@ -189,7 +193,7 @@ export class LecturerService {
 
   async Detail(lecturerId: string): Promise<ILecturer> {
     const foundLecturer = await this.lecturerRepository.findOneBy({
-      id: lecturerId.toString() as Uuid,
+      id: lecturerId as Uuid,
     });
 
     if (!foundLecturer) {
@@ -214,22 +218,33 @@ export class LecturerService {
         throw new NotFoundException('Lecturer data not found.');
       }
 
-      await this.lecturerRepository.bulkDelete(req.lecturerIds);
+      try {
+        await this.lecturerRepository.bulkDelete(req.lecturerIds);
 
-      return foundLecturers.map((lecturer) =>
-        CreateLecturerDto.toPlainLecturer(lecturer),
-      );
+        return foundLecturers.map((lecturer) =>
+          CreateLecturerDto.toPlainLecturer(lecturer),
+        );
+      } catch (err: unknown) {
+        throw new InternalServerErrorException(
+          err instanceof Error ? err.message : 'Unexpected error',
+        );
+      }
     } else {
       const foundLecturer = await this.lecturerRepository.findOneBy({
-        id: lecturerId.toString() as Uuid,
+        id: lecturerId as Uuid,
       });
 
       if (!foundLecturer) {
-        throw new NotFoundException('Lect urer data is not found.');
+        throw new NotFoundException('Lecturer data is not found.');
       }
-
-      await this.lecturerRepository.softDelete(foundLecturer.id);
-      return CreateLecturerDto.toPlainLecturer(foundLecturer);
+      try {
+        await this.lecturerRepository.softDelete(foundLecturer.id);
+        return CreateLecturerDto.toPlainLecturer(foundLecturer);
+      } catch (err: unknown) {
+        throw new InternalServerErrorException(
+          err instanceof Error ? err.message : 'Unexpected error',
+        );
+      }
     }
   }
 }

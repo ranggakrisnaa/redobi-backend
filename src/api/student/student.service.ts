@@ -72,7 +72,7 @@ export class StudentService {
     file: Express.Multer.File,
   ): Promise<Partial<IStudent>> {
     const foundStudent = await this.studentRepository.findOneBy({
-      id: studentId.toString() as Uuid,
+      id: studentId as Uuid,
     });
 
     if (!foundStudent) {
@@ -97,7 +97,7 @@ export class StudentService {
 
   async Detail(studentId: string): Promise<IStudent> {
     const foundStudent = await this.studentRepository.findOneBy({
-      id: studentId.toString() as Uuid,
+      id: studentId as Uuid,
     });
     if (!foundStudent) {
       throw new NotFoundException('Student data not found.');
@@ -127,7 +127,7 @@ export class StudentService {
         );
       } else {
         const foundStudent = await this.studentRepository.findOneBy({
-          id: studentId.toString() as Uuid,
+          id: studentId as Uuid,
         });
 
         if (!foundStudent) {
@@ -203,7 +203,7 @@ export class StudentService {
               : INITIAL_VALUE.STRING,
           nim:
             typeof rowData[2] === 'number'
-              ? rowData[2].toString()
+              ? (rowData[2] as unknown as string)
               : INITIAL_VALUE.STRING,
           tahunMasuk:
             typeof rowData[3] === 'number'
@@ -226,7 +226,7 @@ export class StudentService {
               ? (rowData[7].trim() as ClassEnum)
               : null,
           imageUrl: DEFAULT.IMAGE_DEFAULT,
-          userId: userId.toString() as Uuid,
+          userId: userId as Uuid,
         };
 
         students.push(student as IStudent);

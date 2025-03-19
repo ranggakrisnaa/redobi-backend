@@ -30,7 +30,7 @@ export class EmailProcessor extends WorkerHost {
 
     switch (job.name) {
       case JobName.EMAIL_VERIFICATION:
-        return await this.emailQueueService.sendEmailVerification(
+        return await this.emailQueueService.sendEmailOTPCode(
           job.data as unknown as IVerifyEmailJob,
         );
       default:
