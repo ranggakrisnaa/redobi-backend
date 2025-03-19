@@ -1,3 +1,4 @@
+import { Uuid } from '@/common/types/common.type';
 import {
   Column,
   Entity,
@@ -5,8 +6,6 @@ import {
   OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-
-import { Uuid } from '../../common/types/common.type';
 import { ISession } from '../interface-model/session-entity.interface';
 import { IUser } from '../interface-model/user-entity.interface';
 import { AbstractEntity } from './abstract.entity';
@@ -18,6 +17,9 @@ export class SessionEntity extends AbstractEntity implements ISession {
     primaryKeyConstraintName: 'PK_session_id',
   })
   id: Uuid;
+
+  @Column({ type: 'varchar', length: 255, name: 'access_token' })
+  accessToken: string;
 
   @Column({ type: 'varchar', length: 255, name: 'refresh_token' })
   refreshToken: string;

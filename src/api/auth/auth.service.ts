@@ -1,16 +1,19 @@
 import { RefreshReqDto } from '@/api/auth/dto/refresh.dto';
+import { RegisterDto } from '@/api/auth/dto/register.dto';
 import { IEmailJob, IVerifyEmailJob } from '@/common/interfaces/job.interface';
 import { Token, Uuid } from '@/common/types/common.type';
 import { AllConfigType } from '@/config/config.type';
-import { INITIAL_VALUE } from '@/constants/app.constant';
+import { DEFAULT, INITIAL_VALUE } from '@/constants/app.constant';
 import { JobName, QueueName } from '@/constants/job.constant';
 import { SessionEntity } from '@/database/entities/session.entity';
 import { UserEntity } from '@/database/entities/user.entity';
 import { OtpTrialStatus } from '@/database/enums/otp-trial-status.enum';
 import { ISession } from '@/database/interface-model/session-entity.interface';
-import { verifyPassword } from '@/utils/password.util';
+import { IUser } from '@/database/interface-model/user-entity.interface';
+import { hashPassword, verifyPassword } from '@/utils/password.util';
 import { InjectQueue } from '@nestjs/bullmq';
 import {
+  ConflictException,
   Injectable,
   InternalServerErrorException,
   UnauthorizedException,
@@ -40,6 +43,30 @@ export class AuthService {
     private readonly emailQueue: Queue<IEmailJob, any, string>,
   ) {}
 
+  async SignUp(reqBody: LoginReqDto): Promise<Partial<IUser>> {
+    const foundUser = await this.userRepository.findOneBy({
+      email: reqBody.email,
+    });
+    if (foundUser) {
+      throw new ConflictException('User is exist.');
+    }
+
+    try {
+      const newUser = this.userRepository.create({
+        ...reqBody,
+        password: await hashPassword(reqBody.password),
+        imageUrl: DEFAULT.IMAGE_DEFAULT,
+      });
+      const user = await this.userRepository.save(newUser);
+
+      return RegisterDto.toPlainUser(user);
+    } catch (err: unknown) {
+      throw new InternalServerErrorException(
+        err instanceof Error ? err.message : 'Unexpected error',
+      );
+    }
+  }
+
   async SignIn(reqBody: LoginReqDto): Promise<SignInResponse> {
     const foundUser = await this.userRepository.findOneBy({
       email: reqBody.email,
@@ -68,6 +95,7 @@ export class AuthService {
           isLimit: INITIAL_VALUE.FALSE,
           otpCode: INITIAL_VALUE.NUMBER,
           otpTrial: INITIAL_VALUE.NUMBER,
+          accessToken: INITIAL_VALUE.STRING,
         });
       }
       const otpCode = Math.floor(100000 + Math.random() * 900000);
@@ -160,6 +188,7 @@ export class AuthService {
         isLimit: false,
         updatedAt: now,
         refreshToken: token.refreshToken,
+        accessToken: token.accessToken,
       });
 
       return token;
@@ -243,12 +272,18 @@ export class AuthService {
     const foundUser = await this.sessionRepository.findOneBy({
       id: verifyToken.id as Uuid,
     });
-
-    return this.createToken({
+    const token = await this.createToken({
       id: foundUser.id,
       sessionId: foundSession.id,
       hash: foundSession.refreshToken,
     });
+
+    await this.sessionRepository.update(foundSession.id, {
+      refreshToken: token.refreshToken,
+      accessToken: token.accessToken,
+    });
+
+    return token;
   }
 
   async Logout(userId: string): Promise<Partial<ISession>> {
