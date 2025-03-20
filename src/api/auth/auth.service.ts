@@ -1,12 +1,12 @@
 import { RefreshReqDto } from '@/api/auth/dto/refresh.dto';
 import { RegisterDto } from '@/api/auth/dto/register.dto';
+import { UserRepository } from '@/api/user/user.repository';
 import { IEmailJob, IVerifyEmailJob } from '@/common/interfaces/job.interface';
 import { Token, Uuid } from '@/common/types/common.type';
 import { AllConfigType } from '@/config/config.type';
 import { DEFAULT, INITIAL_VALUE } from '@/constants/app.constant';
 import { JobName, QueueName } from '@/constants/job.constant';
 import { SessionEntity } from '@/database/entities/session.entity';
-import { UserEntity } from '@/database/entities/user.entity';
 import { OtpTrialStatus } from '@/database/enums/otp-trial-status.enum';
 import { ISession } from '@/database/interface-model/session-entity.interface';
 import { IUser } from '@/database/interface-model/user-entity.interface';
@@ -20,10 +20,9 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Queue } from 'bullmq';
 import ms from 'ms';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { SessionRepository } from '../session/session.repository';
 import { LoginReqDto } from './dto/login.dto';
 import { LogoutResDto } from './dto/logout.res';
@@ -36,8 +35,7 @@ export class AuthService {
     private readonly dataSource: DataSource,
     private readonly configService: ConfigService<AllConfigType>,
     private readonly jwtService: JwtService,
-    @InjectRepository(UserEntity)
-    private readonly userRepository: Repository<UserEntity>,
+    private readonly userRepository: UserRepository,
     private readonly sessionRepository: SessionRepository,
     @InjectQueue(QueueName.EMAIL)
     private readonly emailQueue: Queue<IEmailJob, any, string>,
@@ -98,6 +96,8 @@ export class AuthService {
           accessToken: INITIAL_VALUE.STRING,
         });
       }
+
+      // TODO: change to otp safe package
       const otpCode = Math.floor(100000 + Math.random() * 900000);
 
       await this.sessionRepository.UpdateSessionByUserIDWithTransaction(
@@ -131,11 +131,37 @@ export class AuthService {
   }
 
   async VerifySignIn(reqBody: VerifyLoginReqDto): Promise<Token> {
-    const now = new Date();
-
     const foundSession = await this.sessionRepository.findOne({
       where: { userId: reqBody.userId as Uuid },
     });
+
+    try {
+      await this.verifyOTP(foundSession, reqBody.otpCode);
+
+      const token = await this.createToken({
+        id: foundSession.userId,
+        sessionId: foundSession.id,
+        hash: foundSession.refreshToken,
+      });
+
+      await this.sessionRepository.update(foundSession.id, {
+        otpTrial: 0,
+        isLimit: false,
+        updatedAt: new Date(),
+        refreshToken: token.refreshToken,
+        accessToken: token.accessToken,
+      });
+
+      return token;
+    } catch (err: unknown) {
+      throw new InternalServerErrorException(
+        err instanceof Error ? err.message : 'Unexpected error',
+      );
+    }
+  }
+
+  async verifyOTP(foundSession: ISession, otpCode: number) {
+    const now = new Date();
 
     if (!foundSession) {
       throw new UnauthorizedException('Session not found');
@@ -149,7 +175,7 @@ export class AuthService {
       throw new UnauthorizedException('OTP expired');
     }
 
-    if (foundSession.otpCode !== reqBody.otpCode) {
+    if (foundSession.otpCode !== otpCode) {
       const updatedTrialCount = foundSession.otpTrial + 1;
       const lastAttemptDiff = this.getMinutesSinceLastAttempt(
         foundSession.updatedAt,
@@ -175,28 +201,7 @@ export class AuthService {
 
       throw new UnauthorizedException('Invalid OTP');
     }
-
-    try {
-      const token = await this.createToken({
-        id: reqBody.userId,
-        sessionId: foundSession.id,
-        hash: foundSession.refreshToken,
-      });
-
-      await this.sessionRepository.update(foundSession.id, {
-        otpTrial: 0,
-        isLimit: false,
-        updatedAt: now,
-        refreshToken: token.refreshToken,
-        accessToken: token.accessToken,
-      });
-
-      return token;
-    } catch (err: unknown) {
-      throw new InternalServerErrorException(
-        err instanceof Error ? err.message : 'Unexpected error',
-      );
-    }
+    return true;
   }
 
   private getMinutesSinceLastAttempt(

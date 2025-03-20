@@ -25,8 +25,11 @@ export class MailService {
     });
   }
 
-  async sendEmailOTPCode(email: string, otpCode: number) {
-    const url = `${this.configService.get('app.frontendUrl', { infer: true })}`;
+  async sendEmailOTPCode(email: string, otpCode: number, isUrl: string) {
+    const url =
+      isUrl == 'user'
+        ? `${this.configService.get('app.frontendUrl', { infer: true })}/users/verify`
+        : `${this.configService.get('app.frontendUrl', { infer: true })}/verify`;
 
     await this.mailerService.sendMail({
       to: email,
