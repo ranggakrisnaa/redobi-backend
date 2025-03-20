@@ -1,22 +1,22 @@
+import { AuthService } from '@/api/auth/auth.service';
+import { SessionRepository } from '@/api/session/session.repository';
 import { UserRepository } from '@/api/user/user.repository';
 import { QueueName, QueuePrefix } from '@/constants/job.constant';
 import { SessionEntity } from '@/database/entities/session.entity';
 import { UserEntity } from '@/database/entities/user.entity';
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
+import { JwtService } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { SessionRepository } from '../session/session.repository';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
+import { UserController } from './user.controller';
+import { UserService } from './user.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([UserEntity, SessionEntity]),
-    JwtModule.register({}),
+    TypeOrmModule.forFeature([SessionEntity, UserEntity]),
     BullModule.registerQueue({
       name: QueueName.EMAIL,
-      prefix: QueuePrefix.AUTH,
+      prefix: QueuePrefix.USER,
       streams: {
         events: {
           maxLen: 1000,
@@ -24,7 +24,13 @@ import { AuthService } from './auth.service';
       },
     }),
   ],
-  controllers: [AuthController],
-  providers: [AuthService, SessionRepository, UserRepository],
+  controllers: [UserController],
+  providers: [
+    UserService,
+    SessionRepository,
+    JwtService,
+    UserRepository,
+    AuthService,
+  ],
 })
-export class AuthModule {}
+export class UserModule {}

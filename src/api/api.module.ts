@@ -5,6 +5,7 @@ import { HomeModule } from './home/home.module';
 import { LecturerModule } from './lecturer/lecturer.module';
 import { SessionModule } from './session/session.module';
 import { StudentModule } from './student/student.module';
+import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { StudentModule } from './student/student.module';
     SessionModule,
     StudentModule,
     LecturerModule,
+    UserModule,
   ],
 })
 export class ApiModule {}

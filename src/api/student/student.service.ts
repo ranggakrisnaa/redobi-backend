@@ -61,8 +61,9 @@ export class StudentService {
       const data = await this.studentRepository.save(newStudent);
       return CreateStudentDto.toPlainStudent(data);
     } catch (err: unknown) {
-      if (err instanceof Error)
-        throw new InternalServerErrorException(err.message);
+      throw new InternalServerErrorException(
+        err instanceof Error ? err.message : 'Unexpected error',
+      );
     }
   }
 
@@ -90,8 +91,9 @@ export class StudentService {
       });
       return CreateStudentDto.toPlainStudent(data);
     } catch (err: unknown) {
-      if (err instanceof Error)
-        throw new InternalServerErrorException(err.message);
+      throw new InternalServerErrorException(
+        err instanceof Error ? err.message : 'Unexpected error',
+      );
     }
   }
 
@@ -138,8 +140,9 @@ export class StudentService {
         return CreateStudentDto.toPlainStudent(foundStudent);
       }
     } catch (err: unknown) {
-      if (err instanceof Error)
-        throw new InternalServerErrorException(err.message);
+      throw new InternalServerErrorException(
+        err instanceof Error ? err.message : 'Unexpected error',
+      );
     }
   }
 
@@ -157,8 +160,9 @@ export class StudentService {
     try {
       return await this.exceljsService.generateExcel(columns, []);
     } catch (err: unknown) {
-      if (err instanceof Error)
-        throw new InternalServerErrorException(err.message);
+      throw new InternalServerErrorException(
+        err instanceof Error ? err.message : 'Unexpected error',
+      );
     }
   }
 
@@ -241,8 +245,9 @@ export class StudentService {
 
       return await this.studentRepository.bulkCreate(students);
     } catch (err: unknown) {
-      if (err instanceof Error)
-        throw new InternalServerErrorException(err.message);
+      throw new InternalServerErrorException(
+        err instanceof Error ? err.message : 'Unexpected error',
+      );
     }
   }
 }
