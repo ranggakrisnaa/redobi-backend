@@ -16,6 +16,7 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -160,11 +161,45 @@ export class AuthService {
     }
   }
 
+  async resetLockAccount(userId: Uuid): Promise<void> {
+    const foundSession = await this.sessionRepository.findOne({
+      where: { userId: userId },
+    });
+
+    if (!foundSession) {
+      throw new NotFoundException('Session not found');
+    }
+
+    const newOtpCode = Math.floor(100000 + Math.random() * 900000);
+    const now = new Date();
+    const validUntil = new Date(now.getTime() + 5 * 60 * 1000); // OTP valid 5 menit
+
+    await this.sessionRepository.update(foundSession.id, {
+      otpTrial: 0,
+      isLimit: false,
+      lockedUntil: null,
+      otpCode: newOtpCode,
+      validOtpUntil: validUntil,
+      updatedAt: now,
+    });
+  }
+
   async verifyOTP(foundSession: ISession, otpCode: number) {
     const now = new Date();
 
     if (!foundSession) {
       throw new UnauthorizedException('Session not found');
+    }
+
+    if (
+      foundSession.isLimit &&
+      foundSession.lockedUntil &&
+      foundSession.lockedUntil < now
+    ) {
+      await this.resetLockAccount(foundSession.userId);
+      throw new UnauthorizedException(
+        'Account has been unlocked. Please check your new OTP',
+      );
     }
 
     if (foundSession.isLimit) {
@@ -175,7 +210,12 @@ export class AuthService {
       throw new UnauthorizedException('OTP expired');
     }
 
-    if (foundSession.otpCode !== otpCode) {
+    const sessionOtp = Number(foundSession.otpCode);
+    const inputOtp = Number(otpCode);
+
+    console.log('Session OTP:', sessionOtp, 'Input OTP:', inputOtp);
+
+    if (sessionOtp !== inputOtp) {
       const updatedTrialCount = foundSession.otpTrial + 1;
       const lastAttemptDiff = this.getMinutesSinceLastAttempt(
         foundSession.updatedAt,
@@ -201,6 +241,7 @@ export class AuthService {
 
       throw new UnauthorizedException('Invalid OTP');
     }
+
     return true;
   }
 
