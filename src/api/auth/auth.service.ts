@@ -120,7 +120,7 @@ export class AuthService {
         { attempts: 3, backoff: { type: 'exponential', delay: 60000 } },
       );
 
-      return { id: foundUser.id, otpCode };
+      return { id: foundUser.id, otpCode, email: foundUser.email };
     } catch (err: unknown) {
       await queryRunner.rollbackTransaction();
       throw new InternalServerErrorException(
