@@ -1,7 +1,7 @@
-import { NumberField, StringField } from '@/decorators/field.decorators';
+import { NumberField, UUIDField } from '@/decorators/field.decorators';
 
 export class VerifyLoginReqDto {
-  @StringField()
+  @UUIDField()
   userId: string;
 
   @NumberField()

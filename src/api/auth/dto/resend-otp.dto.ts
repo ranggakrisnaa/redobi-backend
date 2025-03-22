@@ -1,15 +1,14 @@
 import {
   EmailField,
-  PasswordField,
   StringField,
+  UUIDField,
 } from '@/decorators/field.decorators';
 
-export class LoginReqDto {
+export class ResendOtpDto {
+  @UUIDField()
+  userId: string;
+
   @EmailField()
   @StringField()
   email: string;
-
-  @PasswordField()
-  @StringField()
-  password: string;
 }

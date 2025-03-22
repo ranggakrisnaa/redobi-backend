@@ -1,5 +1,6 @@
 import { RefreshReqDto } from '@/api/auth/dto/refresh.dto';
 import { RegisterDto } from '@/api/auth/dto/register.dto';
+import { ResendOtpDto } from '@/api/auth/dto/resend-otp.dto';
 import { Token } from '@/common/types/common.type';
 import { ISession } from '@/database/interface-model/session-entity.interface';
 import { IUser } from '@/database/interface-model/user-entity.interface';
@@ -47,6 +48,15 @@ export class AuthController {
   @Post('verify-login')
   async VerifySignIn(@Body() req: VerifyLoginReqDto): Promise<Token> {
     return await this.authService.VerifySignIn(req);
+  }
+
+  @ApiPublic({
+    type: ResendOtpDto,
+    summary: 'Verify Sign in',
+  })
+  @Post('/resend')
+  async ResendOTP(@Body() req: ResendOtpDto) {
+    return await this.authService.ResendOTP(req);
   }
 
   @ApiPublic({
