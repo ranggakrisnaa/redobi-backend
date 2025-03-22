@@ -1,5 +1,7 @@
 import { RefreshReqDto } from '@/api/auth/dto/refresh.dto';
 import { RegisterDto } from '@/api/auth/dto/register.dto';
+import { ResendOtpDto } from '@/api/auth/dto/resend-otp.dto';
+import { ResendOtpResponse } from '@/api/auth/types/resend-otp-response.type';
 import { UserRepository } from '@/api/user/user.repository';
 import { IEmailJob, IVerifyEmailJob } from '@/common/interfaces/job.interface';
 import { Token, Uuid } from '@/common/types/common.type';
@@ -26,7 +28,7 @@ import ms from 'ms';
 import { DataSource } from 'typeorm';
 import { SessionRepository } from '../session/session.repository';
 import { LoginReqDto } from './dto/login.dto';
-import { LogoutResDto } from './dto/logout.res';
+import { LogoutResDto } from './dto/logout.dto.res';
 import { VerifyLoginReqDto } from './dto/verify-login.dto';
 import { SignInResponse } from './types/sign-in-response.type';
 
@@ -302,24 +304,21 @@ export class AuthService {
   }
 
   async RefreshToken(req: RefreshReqDto): Promise<Token> {
-    const foundSession = await this.sessionRepository.findOneBy({
-      refreshToken: req.refreshToken,
-    });
-    if (!foundSession) {
-      throw new UnauthorizedException('Session is not found.');
-    }
-
     const verifyToken = await this.jwtService.verifyAsync(req.refreshToken, {
       secret: this.configService.getOrThrow('auth.refreshSecret', {
         infer: true,
       }),
     });
 
-    const foundUser = await this.sessionRepository.findOneBy({
-      id: verifyToken.id as Uuid,
+    const foundSession = await this.sessionRepository.findOneBy({
+      id: verifyToken.sessionId,
     });
+    if (!foundSession) {
+      throw new UnauthorizedException('Session is not found.');
+    }
+
     const token = await this.createToken({
-      id: foundUser.id,
+      id: foundSession.userId,
       sessionId: foundSession.id,
       hash: foundSession.refreshToken,
     });
@@ -330,6 +329,50 @@ export class AuthService {
     });
 
     return token;
+  }
+
+  async ResendOTP(req: ResendOtpDto): Promise<ResendOtpResponse> {
+    const [foundUser, foundSession] = await Promise.all([
+      this.userRepository.findOne({
+        where: {
+          email: req.email,
+          id: req.userId as Uuid,
+        },
+      }),
+      this.sessionRepository.findOneBy({ userId: req.userId as Uuid }),
+    ]);
+
+    if (!foundUser) {
+      throw new UnauthorizedException('User is not found.');
+    }
+
+    if (!foundSession) {
+      throw new UnauthorizedException('Session is not found.');
+    }
+
+    // TODO: change to otp safe package
+    const otpCode = Math.floor(100000 + Math.random() * 900000);
+    try {
+      await this.sessionRepository.update(foundSession.id, {
+        otpCode,
+        validOtpUntil: new Date(Date.now() + 10 * 60 * 1000),
+      });
+
+      await this.emailQueue.add(
+        JobName.EMAIL_VERIFICATION,
+        {
+          email: foundUser.email,
+          otpCode,
+        } as IVerifyEmailJob,
+        { attempts: 3, backoff: { type: 'exponential', delay: 60000 } },
+      );
+
+      return { id: foundUser.id as Uuid, otpCode };
+    } catch (err: unknown) {
+      throw new InternalServerErrorException(
+        err instanceof Error ? err.message : 'Unexpected error',
+      );
+    }
   }
 
   async Logout(userId: string): Promise<Partial<ISession>> {
