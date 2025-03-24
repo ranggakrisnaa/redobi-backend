@@ -40,7 +40,7 @@ export class StudentRepository extends Repository<StudentEntity> {
     }
 
     if (reqQuery.search) {
-      query.andWhere(`${targetName}.name ILIKE :search`, {
+      query.andWhere(`${targetName}.full_name ILIKE :search`, {
         search: `%${reqQuery.search}%`,
       });
     }
