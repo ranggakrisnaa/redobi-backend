@@ -11,6 +11,7 @@ import { Uuid } from '@/common/types/common.type';
 import { DEFAULT } from '@/constants/app.constant';
 import { JobName, QueueName } from '@/constants/job.constant';
 import { IUser } from '@/database/interface-model/user-entity.interface';
+import { AwsService } from '@/libs/aws/aws.service';
 import { hashPassword, verifyPassword } from '@/utils/password.util';
 import { InjectQueue } from '@nestjs/bullmq';
 import {
@@ -28,6 +29,7 @@ export class UserService {
     @InjectQueue(QueueName.EMAIL)
     private readonly emailQueue: Queue<IEmailJob, any, string>,
     private readonly authService: AuthService,
+    private readonly awsService: AwsService,
   ) {}
 
   async Detail(userId: string): Promise<IUser> {
@@ -42,6 +44,7 @@ export class UserService {
   }
 
   async Update(req: UpdateUserDto, userId: string, file: Express.Multer.File) {
+    let imageUrl = DEFAULT.IMAGE_DEFAULT;
     const foundUser = await this.userRepository.findOneBy({
       id: userId as Uuid,
     });
@@ -49,9 +52,9 @@ export class UserService {
       throw new NotFoundException('User is not found.');
     }
 
-    const imageUrl = file
-      ? `${DEFAULT.IMAGE_PATH}/${file.filename}`
-      : DEFAULT.IMAGE_DEFAULT;
+    if (file) {
+      imageUrl = await this.awsService.uploadFile(file);
+    }
 
     try {
       const data = await this.userRepository.save({

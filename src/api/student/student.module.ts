@@ -1,6 +1,7 @@
 import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
 import { SessionEntity } from '@/database/entities/session.entity';
 import { StudentEntity } from '@/database/entities/student.entity';
+import { AwsService } from '@/libs/aws/aws.service';
 import { Module } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -20,6 +21,7 @@ import { StudentService } from './student.service';
     OffsetPaginatedDto,
     SessionRepository,
     JwtService,
+    AwsService,
   ],
 })
 export class StudentModule {}
