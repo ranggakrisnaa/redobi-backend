@@ -3,6 +3,7 @@ import { Uuid } from '@/common/types/common.type';
 import { DEFAULT, INITIAL_VALUE } from '@/constants/app.constant';
 import { TipePembimbingEnum } from '@/database/enums/tipe-pembimbing.enum';
 import { ILecturer } from '@/database/interface-model/lecturer-entity.interface';
+import { AwsService } from '@/libs/aws/aws.service';
 import {
   BadRequestException,
   ForbiddenException,
@@ -26,6 +27,7 @@ export class LecturerService {
   constructor(
     private readonly exceljsService: ExcelJsService,
     private readonly lecturerRepository: LecturerRepository,
+    private readonly awsService: AwsService,
   ) {}
 
   async GenerateTemplateExcel() {
@@ -112,6 +114,7 @@ export class LecturerService {
     userId: string,
     file: Express.Multer.File,
   ): Promise<Partial<ILecturer>> {
+    let imageUrl = DEFAULT.IMAGE_DEFAULT;
     const foundLecturer = await this.lecturerRepository.findOneBy({
       nidn: req.nidn,
     });
@@ -120,9 +123,9 @@ export class LecturerService {
       throw new ForbiddenException('Lecturer data already exist.');
     }
 
-    const imageUrl = file
-      ? `${DEFAULT.IMAGE_PATH}/${file.filename}`
-      : DEFAULT.IMAGE_DEFAULT;
+    if (file) {
+      imageUrl = await this.awsService.uploadFile(file);
+    }
 
     const jumlahBimbingan = req.jumlahBimbingan ?? INITIAL_VALUE.NUMBER;
 
@@ -149,6 +152,7 @@ export class LecturerService {
     lecturerId: string,
     file: Express.Multer.File,
   ): Promise<Partial<ILecturer>> {
+    let imageUrl = DEFAULT.IMAGE_DEFAULT;
     const foundLecturer = await this.lecturerRepository.findOneBy({
       id: lecturerId as Uuid,
     });
@@ -157,11 +161,14 @@ export class LecturerService {
       throw new NotFoundException('Lecturer data is not found.');
     }
 
-    const imageUrl = file
-      ? `${DEFAULT.IMAGE_PATH}/${file.filename}`
-      : foundLecturer
-        ? foundLecturer.imageUrl
-        : DEFAULT.IMAGE_DEFAULT;
+    if (foundLecturer.imageUrl) {
+      const key = this.awsService.extractKeyFromUrl(foundLecturer.imageUrl);
+      await this.awsService.deleteFile(key);
+    }
+
+    if (file) {
+      imageUrl = await this.awsService.uploadFile(file);
+    }
 
     const jumlahBimbingan = req.jumlahBimbingan
       ? req.jumlahBimbingan

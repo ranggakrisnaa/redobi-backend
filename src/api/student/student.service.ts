@@ -4,6 +4,7 @@ import { DEFAULT, INITIAL_VALUE } from '@/constants/app.constant';
 import { ClassEnum } from '@/database/enums/class.enum';
 import { MajorEnum } from '@/database/enums/major.enum';
 import { IStudent } from '@/database/interface-model/student-entity.interface';
+import { AwsService } from '@/libs/aws/aws.service';
 import {
   BadRequestException,
   ForbiddenException,
@@ -27,6 +28,7 @@ export class StudentService {
   constructor(
     private readonly studentRepository: StudentRepository,
     private readonly exceljsService: ExcelJsService,
+    private readonly awsService: AwsService,
   ) {}
 
   async Pagination(
@@ -40,6 +42,7 @@ export class StudentService {
     userId: string,
     file?: Express.Multer.File,
   ): Promise<Partial<IStudent>> {
+    let imageUrl = DEFAULT.IMAGE_DEFAULT;
     const foundStudent = await this.studentRepository.findOneBy({
       nim: req.nim,
     });
@@ -47,9 +50,9 @@ export class StudentService {
       throw new ForbiddenException('Student data already exist.');
     }
 
-    const imageUrl = file
-      ? `${DEFAULT.IMAGE_PATH}/${file.filename}`
-      : DEFAULT.IMAGE_DEFAULT;
+    if (file) {
+      imageUrl = await this.awsService.uploadFile(file);
+    }
 
     try {
       const newStudent = this.studentRepository.create({
@@ -72,6 +75,7 @@ export class StudentService {
     studentId: string,
     file: Express.Multer.File,
   ): Promise<Partial<IStudent>> {
+    let imageUrl = DEFAULT.IMAGE_DEFAULT;
     const foundStudent = await this.studentRepository.findOneBy({
       id: studentId as Uuid,
     });
@@ -79,9 +83,15 @@ export class StudentService {
     if (!foundStudent) {
       throw new Error('Student data not found.');
     }
-    const imageUrl = file
-      ? `${DEFAULT.IMAGE_PATH}/${file.filename}`
-      : DEFAULT.IMAGE_DEFAULT;
+
+    if (foundStudent.imageUrl) {
+      const key = this.awsService.extractKeyFromUrl(foundStudent.imageUrl);
+      await this.awsService.deleteFile(key);
+    }
+
+    if (file) {
+      imageUrl = await this.awsService.uploadFile(file);
+    }
 
     try {
       const data = await this.studentRepository.save({
