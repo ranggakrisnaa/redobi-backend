@@ -138,6 +138,13 @@ export class StudentService {
           CreateStudentDto.toPlainStudent(student),
         );
       } else {
+        const uuidRegex =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[4][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+        if (!uuidRegex.test(studentId)) {
+          throw new BadRequestException('Invalid UUID format.');
+        }
+
         const foundStudent = await this.studentRepository.findOneBy({
           id: studentId as Uuid,
         });

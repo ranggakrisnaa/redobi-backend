@@ -214,44 +214,42 @@ export class LecturerService {
     lecturerId: string,
     req: DeleteLecturerDto,
   ): Promise<Partial<ILecturer> | Partial<ILecturer>[]> {
-    console.log(req.lecturerIds);
+    try {
+      if (req?.lecturerIds.length > 0) {
+        const foundLecturers = await this.lecturerRepository.findBy({
+          id: In(req.lecturerIds),
+        });
 
-    if (req?.lecturerIds.length > 0) {
-      const foundLecturers = await this.lecturerRepository.findBy({
-        id: In(req.lecturerIds),
-      });
+        if (!foundLecturers.length) {
+          throw new NotFoundException('Lecturer data not found.');
+        }
 
-      if (!foundLecturers.length) {
-        throw new NotFoundException('Lecturer data not found.');
-      }
-
-      try {
         await this.lecturerRepository.bulkDelete(req.lecturerIds);
 
         return foundLecturers.map((lecturer) =>
           CreateLecturerDto.toPlainLecturer(lecturer),
         );
-      } catch (err: unknown) {
-        throw new InternalServerErrorException(
-          err instanceof Error ? err.message : 'Unexpected error',
-        );
-      }
-    } else {
-      const foundLecturer = await this.lecturerRepository.findOneBy({
-        id: lecturerId as Uuid,
-      });
+      } else {
+        const uuidRegex =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[4][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-      if (!foundLecturer) {
-        throw new NotFoundException('Lecturer data is not found.');
-      }
-      try {
+        if (!uuidRegex.test(lecturerId)) {
+          throw new BadRequestException('Invalid UUID format.');
+        }
+        const foundLecturer = await this.lecturerRepository.findOneBy({
+          id: lecturerId as Uuid,
+        });
+
+        if (!foundLecturer) {
+          throw new NotFoundException('Lecturer data is not found.');
+        }
         await this.lecturerRepository.softDelete(foundLecturer.id);
         return CreateLecturerDto.toPlainLecturer(foundLecturer);
-      } catch (err: unknown) {
-        throw new InternalServerErrorException(
-          err instanceof Error ? err.message : 'Unexpected error',
-        );
       }
+    } catch (error: unknown) {
+      throw new InternalServerErrorException(
+        error instanceof Error ? error.message : 'Unexpected error',
+      );
     }
   }
 }
