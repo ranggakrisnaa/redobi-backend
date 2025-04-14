@@ -108,9 +108,9 @@ export class StudentController {
   @ApiAuth({
     summary: 'Delete Student',
   })
-  @Delete(':studentId')
+  @Delete(':studentId?')
   async Delete(
-    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @Param('studentId') studentId: string,
     @Body() req: DeleteStudentDto,
   ): Promise<Partial<IStudent> | Partial<IStudent>[]> {
     return await this.studentService.Delete(studentId, req);

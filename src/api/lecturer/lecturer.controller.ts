@@ -120,7 +120,7 @@ export class LecturerController {
   @ApiAuth({
     summary: 'Delete lecturer',
   })
-  @Delete(':lecturerId')
+  @Delete(':lecturerId?')
   async Delete(
     @Param('lecturerId') lecturerId: string,
     @Body() req: DeleteLecturerDto,
