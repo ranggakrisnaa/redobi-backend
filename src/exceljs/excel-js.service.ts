@@ -60,12 +60,6 @@ export class ExcelJsService {
       }
     });
 
-    // res.setHeader('Content-Type', 'application/vnd.ms-excel');
-    // res.setHeader(
-    //   'Content-Disposition',
-    //   'attachment; filename=template.xlsx',
-    // );
-
     return await workbook.xlsx.writeBuffer();
   }
 }
