@@ -55,7 +55,10 @@ export class StudentController {
   async GenerateTemplateExcel(@Res() res: Response) {
     const bufferFile = await this.studentService.GenerateTemplateExcel();
 
-    res.setHeader('Content-Type', 'application/vnd.ms-excel');
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
     res.setHeader(
       'Content-Disposition',
       'attachment; filename=template_mahasiswa.xlsx',
