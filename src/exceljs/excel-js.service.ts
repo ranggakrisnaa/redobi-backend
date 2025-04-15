@@ -60,6 +60,6 @@ export class ExcelJsService {
       }
     });
 
-    return await workbook.xlsx.writeBuffer();
+    return (await workbook.xlsx.writeBuffer()) as Buffer;
   }
 }
