@@ -55,15 +55,13 @@ export class StudentController {
   async GenerateTemplateExcel(@Res() res: Response) {
     const bufferFile = await this.studentService.GenerateTemplateExcel();
 
-    res.setHeader(
-      'Content-Type',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    );
-    res.setHeader(
-      'Content-Disposition',
-      'attachment; filename=template_mahasiswa.xlsx',
-    );
-    return res.end(bufferFile);
+    res.set({
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': 'attachment; filename=template_mahasiswa.xlsx',
+      'Content-Length': Buffer.byteLength(bufferFile),
+    });
+    res.send(bufferFile);
   }
 
   @ApiAuth({
