@@ -53,7 +53,7 @@ export class LecturerController {
       'Content-Disposition',
       'attachment; filename=template_dosen-pembimbing.xlsx',
     );
-    res.send(bufferFile);
+    return res.end(bufferFile);
   }
 
   @ApiAuth({

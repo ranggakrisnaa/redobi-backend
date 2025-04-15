@@ -63,7 +63,7 @@ export class StudentController {
       'Content-Disposition',
       'attachment; filename=template_mahasiswa.xlsx',
     );
-    res.send(bufferFile);
+    return res.end(bufferFile);
   }
 
   @ApiAuth({
