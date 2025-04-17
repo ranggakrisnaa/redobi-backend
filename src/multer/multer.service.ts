@@ -11,9 +11,9 @@ export class MulterService {
       file: Express.Multer.File,
       callback: CallableFunction,
     ) => {
-      if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
-        return callback(new Error('Only image files are allowed!'), false);
-      }
+      // if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
+      //   return callback(new Error('Only image files are allowed!'), false);
+      // }
       callback(null, true);
     },
   };
