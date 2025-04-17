@@ -63,11 +63,13 @@ export class LecturerService {
 
       const lecturers: ILecturer[] = [];
       const errors: ErrHandleExcel[] = [];
+      let hasValidRow = false;
 
       worksheet.eachRow((row, rowNumber) => {
         if (rowNumber === 1) return;
 
         const rowData = row.values as any[];
+        hasValidRow = true;
 
         if (!Object.values(TipePembimbingEnum).includes(rowData[3]?.trim())) {
           errors.push({ row: rowNumber, message: 'Invalid tipe pembimbing.' });
@@ -99,6 +101,10 @@ export class LecturerService {
           `Found ${errors.length} errors in the Excel file:\n` +
           errors.map((e) => `Row ${e.row}: ${e.message}`).join('\n');
         throw new BadRequestException(errorMessage);
+      }
+
+      if (!hasValidRow) {
+        throw new BadRequestException('Missing data in Excel.');
       }
 
       return await this.lecturerRepository.bulkCreate(lecturers);
