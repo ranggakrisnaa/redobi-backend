@@ -1,4 +1,5 @@
 import { Uuid } from '@/common/types/common.type';
+import { ProdiEnum } from '../enums/prodi.enum';
 import { TipePembimbingEnum } from '../enums/tipe-pembimbing.enum';
 import { IAssessment } from './assessment-entity.interface';
 import { IBaseEntity } from './base-entity.interface';
@@ -12,6 +13,8 @@ export interface ILecturer extends IBaseEntity {
   fullName: string;
   jumlahBimbingan: number;
   tipePembimbing: TipePembimbingEnum;
+  prodi: ProdiEnum;
+  kuotaBimbingan: number;
   imageUrl: string;
   userId: Uuid;
   user?: IUser;
