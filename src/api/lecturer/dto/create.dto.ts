@@ -1,8 +1,10 @@
 import { Uuid } from '@/common/types/common.type';
+import { ProdiEnum } from '@/database/enums/prodi.enum';
 import { TipePembimbingEnum } from '@/database/enums/tipe-pembimbing.enum';
 import { ILecturer } from '@/database/interface-model/lecturer-entity.interface';
 import {
   EnumField,
+  NumberField,
   NumberFieldOptional,
   StringField,
   StringFieldOptional,
@@ -25,6 +27,12 @@ export class CreateLecturerDto {
 
   @EnumField(() => TipePembimbingEnum)
   tipePembimbing: TipePembimbingEnum;
+
+  @EnumField(() => ProdiEnum)
+  prodi: ProdiEnum;
+
+  @NumberField()
+  kuotaBimbingan: number;
 
   @StringFieldOptional()
   imageUrl: string;

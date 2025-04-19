@@ -8,6 +8,7 @@ import {
   Relation,
 } from 'typeorm';
 import { Uuid } from '../../common/types/common.type';
+import { ProdiEnum } from '../enums/prodi.enum';
 import { TipePembimbingEnum } from '../enums/tipe-pembimbing.enum';
 import { IAssessment } from '../interface-model/assessment-entity.interface';
 import { ILecturer } from '../interface-model/lecturer-entity.interface';
@@ -36,6 +37,12 @@ export class LecturerEntity extends AbstractEntity implements ILecturer {
 
   @Column({ type: 'enum', enum: TipePembimbingEnum, name: 'tipe_pembimbing' })
   tipePembimbing: TipePembimbingEnum;
+
+  @Column({ type: 'enum', enum: ProdiEnum, name: 'prodi' })
+  prodi: ProdiEnum;
+
+  @Column({ type: 'int', name: 'kuota_bimbingan' })
+  kuotaBimbingan: number;
 
   @Column({ type: 'text', name: 'image_url' })
   imageUrl: string;
