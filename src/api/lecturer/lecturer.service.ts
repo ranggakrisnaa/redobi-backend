@@ -1,6 +1,7 @@
 import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
 import { Uuid } from '@/common/types/common.type';
 import { DEFAULT, INITIAL_VALUE } from '@/constants/app.constant';
+import { ProdiEnum } from '@/database/enums/prodi.enum';
 import { TipePembimbingEnum } from '@/database/enums/tipe-pembimbing.enum';
 import { ILecturer } from '@/database/interface-model/lecturer-entity.interface';
 import { AwsService } from '@/libs/aws/aws.service';
@@ -34,6 +35,8 @@ export class LecturerService {
     const columns = [
       { header: 'Nama dosen', key: 'fullName' },
       { header: 'NIDN', key: 'nidn' },
+      { header: 'Prodi', key: 'prodi' },
+      { header: 'Kuota Bimbingan', key: 'kotaBimbingan' },
       { header: 'Tipe Pembimbing', key: 'tipePembimbing' },
     ] as ColumnConfig[];
 
@@ -71,8 +74,12 @@ export class LecturerService {
         const rowData = row.values as any[];
         hasValidRow = true;
 
-        if (!Object.values(TipePembimbingEnum).includes(rowData[3]?.trim())) {
+        if (!Object.values(TipePembimbingEnum).includes(rowData[5]?.trim())) {
           errors.push({ row: rowNumber, message: 'Invalid tipe pembimbing.' });
+        }
+
+        if (!Object.values(ProdiEnum).includes(rowData[3]?.trim())) {
+          errors.push({ row: rowNumber, message: 'Invalid prodi.' });
         }
 
         const lecturer: Partial<ILecturer> = {
@@ -84,9 +91,15 @@ export class LecturerService {
             typeof rowData[2] === 'number'
               ? (rowData[2] as unknown as string)
               : INITIAL_VALUE.STRING,
-          tipePembimbing:
+          prodi:
             typeof rowData[3] === 'string'
-              ? (rowData[3].trim() as TipePembimbingEnum)
+              ? (rowData[3].trim() as ProdiEnum)
+              : null,
+          kuotaBimbingan:
+            typeof rowData[4] === 'number' ? rowData[4] : INITIAL_VALUE.NUMBER,
+          tipePembimbing:
+            typeof rowData[5] === 'string'
+              ? (rowData[5].trim() as TipePembimbingEnum)
               : null,
           jumlahBimbingan: INITIAL_VALUE.NUMBER,
           imageUrl: DEFAULT.IMAGE_DEFAULT,
