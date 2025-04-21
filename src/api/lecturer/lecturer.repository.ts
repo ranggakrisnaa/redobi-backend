@@ -25,6 +25,24 @@ export class LecturerRepository extends Repository<LecturerEntity> {
     ];
     const query = this.createQueryBuilder(targetName);
 
+    if (reqQuery.search) {
+      query.andWhere(`${targetName}.full_name ILIKE :search`, {
+        search: `%${reqQuery.search}%`,
+      });
+    }
+
+    if (reqQuery.prodi) {
+      query.andWhere(`${targetName}.prodi = :prodi`, {
+        prodi: reqQuery.prodi,
+      });
+    }
+
+    if (reqQuery.tipe_pembimbing) {
+      query.andWhere(`${targetName}.tipePembimbing = :tipePembimbing`, {
+        tipePembimbing: reqQuery.tipe_pembimbing,
+      });
+    }
+
     const sortField = ALLOW_TO_SORT.find((sort) => sort.name === reqQuery.sort);
     if (sortField) {
       query.orderBy(sortField.alias, reqQuery.order as OrderDirectionEnum);
