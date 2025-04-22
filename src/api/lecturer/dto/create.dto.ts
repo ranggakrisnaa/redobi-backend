@@ -37,7 +37,7 @@ export class CreateLecturerDto {
   @StringFieldOptional()
   imageUrl: string;
 
-  static toPlainLecturer(dto: CreateLecturerDto): Partial<ILecturer> {
+  static toResponse(dto: CreateLecturerDto): Partial<ILecturer> {
     return {
       id: dto.id,
       createdAt: dto.createdAt,

@@ -62,7 +62,7 @@ export class StudentService {
       });
 
       const data = await this.studentRepository.save(newStudent);
-      return CreateStudentDto.toPlainStudent(data);
+      return CreateStudentDto.toResponse(data);
     } catch (err: unknown) {
       throw new InternalServerErrorException(
         err instanceof Error ? err.message : 'Unexpected error',
@@ -99,7 +99,7 @@ export class StudentService {
         ...req,
         imageUrl,
       });
-      return CreateStudentDto.toPlainStudent(data);
+      return CreateStudentDto.toResponse(data);
     } catch (err: unknown) {
       throw new InternalServerErrorException(
         err instanceof Error ? err.message : 'Unexpected error',
@@ -123,7 +123,7 @@ export class StudentService {
     req: DeleteStudentDto,
   ): Promise<Partial<IStudent> | Partial<IStudent>[]> {
     try {
-      if (req.studentIds.length > 0) {
+      if (Array.isArray(req?.studentIds) && req.studentIds.length > 0) {
         const foundStudents = await this.studentRepository.findBy({
           id: In(req.studentIds),
         });
@@ -135,7 +135,7 @@ export class StudentService {
         await this.studentRepository.bulkDelete(req.studentIds);
 
         return foundStudents.map((student) =>
-          CreateStudentDto.toPlainStudent(student),
+          CreateStudentDto.toResponse(student),
         );
       } else {
         const uuidRegex =
@@ -153,8 +153,8 @@ export class StudentService {
           throw new NotFoundException('Student data not found.');
         }
 
-        await this.studentRepository.softDelete(foundStudent.id);
-        return CreateStudentDto.toPlainStudent(foundStudent);
+        await this.studentRepository.delete(foundStudent.id);
+        return CreateStudentDto.toResponse(foundStudent);
       }
     } catch (err: unknown) {
       throw new InternalServerErrorException(

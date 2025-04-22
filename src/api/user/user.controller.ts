@@ -67,7 +67,7 @@ export class UserController {
   }
 
   @ApiAuth()
-  @Post('confirm-update-password')
+  @Post('confirm-update-email')
   async UpdateEmail(
     @Body() req: UpdateEmailDto,
     @CurrentUser() userToken: JwtPayloadType,

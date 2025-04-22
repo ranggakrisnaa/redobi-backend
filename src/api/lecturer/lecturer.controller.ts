@@ -69,6 +69,7 @@ export class LecturerController {
   }
 
   @ApiAuth({
+    type: CreateLecturerDto,
     summary: 'Create lecturer',
   })
   @Post()
@@ -84,6 +85,7 @@ export class LecturerController {
   }
 
   @ApiAuth({
+    type: UpdateLecturerDto,
     summary: 'Update lecturer',
   })
   @Put(':lecturerId')
@@ -120,6 +122,7 @@ export class LecturerController {
 
   @ApiAuth({
     summary: 'Delete lecturer',
+    type: DeleteLecturerDto,
   })
   @Delete(':lecturerId?')
   async Delete(
