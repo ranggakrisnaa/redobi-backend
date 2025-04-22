@@ -92,7 +92,7 @@ export class LecturerController {
   )
   async Update(
     @Body() req: UpdateLecturerDto,
-    @Param('lectuurerId', ParseUUIDPipe) lecturerId: string,
+    @Param('lecturerId', ParseUUIDPipe) lecturerId: string,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<Partial<ILecturer>> {
     return await this.lecturerService.Update(req, lecturerId, file);
