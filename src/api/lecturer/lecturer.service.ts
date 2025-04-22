@@ -189,20 +189,18 @@ export class LecturerService {
       imageUrl = await this.awsService.uploadFile(file);
     }
 
-    const jumlahBimbingan = req.jumlahBimbingan
-      ? req.jumlahBimbingan
-      : foundLecturer
-        ? foundLecturer.jumlahBimbingan
-        : INITIAL_VALUE.NUMBER;
+    const jumlahBimbingan =
+      req.jumlahBimbingan !== undefined
+        ? req.jumlahBimbingan
+        : (foundLecturer.jumlahBimbingan ?? INITIAL_VALUE.NUMBER);
 
     try {
       const data = await this.lecturerRepository.save({
-        ...req,
         ...foundLecturer,
+        ...req,
         imageUrl,
         jumlahBimbingan,
       });
-
       return CreateLecturerDto.toPlainLecturer(data);
     } catch (err: unknown) {
       throw new InternalServerErrorException(
