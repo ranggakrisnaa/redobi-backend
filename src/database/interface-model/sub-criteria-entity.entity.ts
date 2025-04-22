@@ -6,6 +6,7 @@ export interface ISubCriteria extends IBaseEntity {
   id: number;
   name: string;
   weight: number;
-  criteria?: ICriteria[];
+  criteria?: ICriteria;
   assessment?: IAssessment[];
+  criteriaId: number;
 }

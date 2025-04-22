@@ -108,6 +108,7 @@ export class StudentController {
 
   @ApiAuth({
     summary: 'Delete Student',
+    type: DeleteStudentDto,
   })
   @Delete(':studentId?')
   async Delete(

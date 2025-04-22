@@ -39,7 +39,7 @@ export class CreateStudentDto {
   @StringFieldOptional()
   imageUrl: string;
 
-  static toPlainStudent(dto: CreateStudentDto): Partial<IStudent> {
+  static toResponse(dto: CreateStudentDto): Partial<IStudent> {
     return {
       id: dto.id,
       createdAt: dto.createdAt,

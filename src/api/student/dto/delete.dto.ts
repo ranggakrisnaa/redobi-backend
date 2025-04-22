@@ -1,6 +1,6 @@
-import { StringField } from '@/decorators/field.decorators';
+import { StringFieldOptional } from '@/decorators/field.decorators';
 
 export class DeleteStudentDto {
-  @StringField({ each: true })
+  @StringFieldOptional({ each: true })
   studentIds: string[];
 }

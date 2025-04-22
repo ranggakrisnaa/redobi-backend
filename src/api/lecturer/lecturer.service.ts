@@ -158,7 +158,7 @@ export class LecturerService {
 
       const data = await this.lecturerRepository.save(newLecturer);
 
-      return CreateLecturerDto.toPlainLecturer(data);
+      return CreateLecturerDto.toResponse(data);
     } catch (err: unknown) {
       throw new InternalServerErrorException(
         err instanceof Error ? err.message : 'Unexpected error',
@@ -201,7 +201,7 @@ export class LecturerService {
         imageUrl,
         jumlahBimbingan,
       });
-      return CreateLecturerDto.toPlainLecturer(data);
+      return CreateLecturerDto.toResponse(data);
     } catch (err: unknown) {
       throw new InternalServerErrorException(
         err instanceof Error ? err.message : 'Unexpected error',
@@ -232,7 +232,7 @@ export class LecturerService {
     req: DeleteLecturerDto,
   ): Promise<Partial<ILecturer> | Partial<ILecturer>[]> {
     try {
-      if (req?.lecturerIds.length > 0) {
+      if (Array.isArray(req?.lecturerIds) && req.lecturerIds.length > 0) {
         const foundLecturers = await this.lecturerRepository.findBy({
           id: In(req.lecturerIds),
         });
@@ -244,7 +244,7 @@ export class LecturerService {
         await this.lecturerRepository.bulkDelete(req.lecturerIds);
 
         return foundLecturers.map((lecturer) =>
-          CreateLecturerDto.toPlainLecturer(lecturer),
+          CreateLecturerDto.toResponse(lecturer),
         );
       } else {
         const uuidRegex =
@@ -260,8 +260,8 @@ export class LecturerService {
         if (!foundLecturer) {
           throw new NotFoundException('Lecturer data is not found.');
         }
-        await this.lecturerRepository.softDelete(foundLecturer.id);
-        return CreateLecturerDto.toPlainLecturer(foundLecturer);
+        await this.lecturerRepository.delete(foundLecturer.id);
+        return CreateLecturerDto.toResponse(foundLecturer);
       }
     } catch (error: unknown) {
       throw new InternalServerErrorException(

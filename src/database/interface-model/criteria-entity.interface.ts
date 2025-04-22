@@ -7,6 +7,5 @@ export interface ICriteria extends IBaseEntity {
   name: string;
   weight: number;
   type: CriteriaTypeEnum;
-  subCriteriaId?: number;
-  subCriteria?: ISubCriteria;
+  subCriteria: ISubCriteria[];
 }
