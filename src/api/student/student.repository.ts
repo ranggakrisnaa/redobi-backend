@@ -86,7 +86,7 @@ export class StudentRepository extends Repository<StudentEntity> {
   }
 
   async bulkDelete(studentIds: string[]): Promise<void> {
-    this.repo.softDelete({
+    this.repo.delete({
       id: In(studentIds),
     });
   }
