@@ -29,7 +29,7 @@ export class SubCriteriaEntity extends AbstractEntity implements ISubCriteria {
     scale: 2,
     transformer: {
       to: (value: number) => value.toFixed(2),
-      from: (value: string) => parseInt(value),
+      from: (value: string) => parseFloat(value),
     },
   })
   weight: number;
