@@ -20,7 +20,7 @@ export class CriteriaRepository extends Repository<CriteriaEntity> {
   ): Promise<OffsetPaginatedDto<ICriteria>> {
     const targetName = this.repo.metadata.targetName;
     const ALLOW_TO_SORT = [
-      { name: 'full_name', alias: `${targetName}.full_name` },
+      { name: 'name', alias: `${targetName}.name` },
       { name: 'created_at', alias: `${targetName}.createdAt` },
     ];
 
