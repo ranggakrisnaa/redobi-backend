@@ -14,10 +14,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { LecturerPaginationReqQuery } from '../lecturer/dto/query.dto';
 import { CriteriaService } from './criteria.service';
 import { CreateCriteriaDto } from './dto/create.dto';
 import { DeleteCriteriaDto } from './dto/delete.dto';
+import { CriteriaPaginationReqQuery } from './dto/query.dto';
 import { UpdateCriteriaDto } from './dto/update.dto';
 
 @ApiTags('criteria')
@@ -34,7 +34,7 @@ export class CriteriaController {
   })
   @Get()
   async Pagination(
-    @Query() reqQuery: LecturerPaginationReqQuery,
+    @Query() reqQuery: CriteriaPaginationReqQuery,
   ): Promise<OffsetPaginatedDto<ICriteria>> {
     return await this.criteriaService.Pagination(reqQuery);
   }
