@@ -4,4 +4,7 @@ import { StringFieldOptional } from '@/decorators/field.decorators';
 export class CriteriaPaginationReqQuery extends PageOptionsDto {
   @StringFieldOptional()
   search: string;
+
+  @StringFieldOptional()
+  type: string;
 }

@@ -28,6 +28,19 @@ export class CriteriaRepository extends Repository<CriteriaEntity> {
       `${targetName}.subCriteria`,
       'subCriteria',
     );
+
+    if (reqQuery.search) {
+      query.where(`${targetName}.name ILIKE :search`, {
+        search: `%${reqQuery.search}%`,
+      });
+    }
+
+    if (reqQuery.type) {
+      query.andWhere(`${targetName}.type = :type`, {
+        type: reqQuery.type,
+      });
+    }
+
     const sortField = ALLOW_TO_SORT.find((sort) => sort.name === reqQuery.sort);
 
     if (sortField) {
