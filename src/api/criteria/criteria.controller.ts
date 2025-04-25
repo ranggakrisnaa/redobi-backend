@@ -30,8 +30,7 @@ export class CriteriaController {
   constructor(private readonly criteriaService: CriteriaService) {}
 
   @ApiAuth({
-    type: CreateCriteriaDto,
-    summary: 'Create criteria',
+    summary: 'Get all criteria',
   })
   @Get()
   async Pagination(
@@ -40,7 +39,13 @@ export class CriteriaController {
     return await this.criteriaService.Pagination(reqQuery);
   }
 
-  async Detail() {}
+  @ApiAuth({
+    summary: 'Get detail criteria',
+  })
+  @Get(':criteriaId')
+  async Detail(@Param('criteriaId') criteriaId: string) {
+    return await this.criteriaService.Detail(+criteriaId);
+  }
 
   @ApiAuth({
     type: CreateCriteriaDto,
@@ -53,7 +58,7 @@ export class CriteriaController {
 
   @ApiAuth({
     type: UpdateCriteriaDto,
-    summary: 'Create criteria',
+    summary: 'Update criteria',
   })
   @Put(':criteriaId')
   async Update(

@@ -21,7 +21,7 @@ export class CriteriaService {
     private readonly subCriteriaRepository: SubCriteriaRepository,
   ) {}
 
-  async Create(req: CreateCriteriaDto) {
+  async Create(req: CreateCriteriaDto): Promise<Partial<ICriteria>> {
     const foundCriteria = await this.criteriaRepository.findOneBy({
       name: req.name,
     });
@@ -50,7 +50,7 @@ export class CriteriaService {
         subCriteria,
       };
 
-      return CreateCriteriaDto.toResponse(fullEntity);
+      return CreateCriteriaDto.toResponse(fullEntity) as ICriteria;
     } catch (err: unknown) {
       throw new InternalServerErrorException(
         err instanceof Error ? err.message : 'Unexpected error',
@@ -58,7 +58,7 @@ export class CriteriaService {
     }
   }
 
-  async Update(req: UpdateCriteriaDto, criteriaId: number) {
+  async Update(req: UpdateCriteriaDto, criteriaId: number): Promise<ICriteria> {
     const foundCriteria = await this.criteriaRepository.findOne({
       where: { id: criteriaId },
       relations: ['subCriteria'],
@@ -103,12 +103,26 @@ export class CriteriaService {
         }
       }
 
-      return CreateCriteriaDto.toResponse({ ...req, id: foundCriteria.id });
+      return CreateCriteriaDto.toResponse({
+        ...req,
+        id: foundCriteria.id,
+      }) as ICriteria;
     } catch (err: unknown) {
       throw new InternalServerErrorException(
         err instanceof Error ? err.message : 'Unexpected error',
       );
     }
+  }
+
+  async Detail(criteriaId: number): Promise<ICriteria> {
+    const foundCriteria = await this.criteriaRepository.findOne({
+      where: { id: criteriaId },
+      relations: ['subCriteria'],
+    });
+    if (!foundCriteria) {
+      throw new NotFoundException('Criteria data is not found.');
+    }
+    return CreateCriteriaDto.toResponse(foundCriteria) as ICriteria;
   }
 
   async Pagination(
@@ -117,7 +131,10 @@ export class CriteriaService {
     return await this.criteriaRepository.Pagination(reqQuery);
   }
 
-  async Delete(criteriaId: number, req: DeleteCriteriaDto) {
+  async Delete(
+    criteriaId: number,
+    req: DeleteCriteriaDto,
+  ): Promise<Partial<ICriteria> | Partial<ICriteria>[]> {
     try {
       if (Array.isArray(req?.criteriaIds) && req.criteriaIds.length > 0) {
         const foundCriteria = await this.criteriaRepository.find({
@@ -142,7 +159,7 @@ export class CriteriaService {
             ...criteria,
             subCriteria: criteria.subCriteria,
           }),
-        );
+        ) as ICriteria[];
       } else {
         const foundCriteria = await this.criteriaRepository.findOne({
           where: {
@@ -160,7 +177,7 @@ export class CriteriaService {
 
         await this.criteriaRepository.delete(criteriaId);
 
-        return CreateCriteriaDto.toResponse(foundCriteria);
+        return CreateCriteriaDto.toResponse(foundCriteria) as ICriteria;
       }
     } catch (error: unknown) {
       throw new InternalServerErrorException(
