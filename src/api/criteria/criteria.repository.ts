@@ -4,7 +4,8 @@ import { OrderDirectionEnum } from '@/common/enums/sort.enum';
 import { CriteriaEntity } from '@/database/entities/criteria.entity';
 import { ICriteria } from '@/database/interface-model/criteria-entity.interface';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { plainToInstance } from 'class-transformer';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import { CriteriaPaginationReqQuery } from './dto/query.dto';
 
 export class CriteriaRepository extends Repository<CriteriaEntity> {
@@ -19,50 +20,51 @@ export class CriteriaRepository extends Repository<CriteriaEntity> {
     reqQuery: CriteriaPaginationReqQuery,
   ): Promise<OffsetPaginatedDto<ICriteria>> {
     const targetName = this.repo.metadata.targetName;
-    const ALLOW_TO_SORT = [
-      { name: 'name', alias: `${targetName}.name` },
-      { name: 'created_at', alias: `${targetName}.createdAt` },
-    ];
-
     const query = this.createQueryBuilder(targetName).leftJoinAndSelect(
       `${targetName}.subCriteria`,
       'subCriteria',
     );
 
-    if (reqQuery.search) {
-      query.where(`${targetName}.name ILIKE :search`, {
-        search: `%${reqQuery.search}%`,
-      });
-    }
+    this.applyFilters(query, reqQuery, targetName);
 
-    if (reqQuery.type) {
-      query.andWhere(`${targetName}.type = :type`, {
-        type: reqQuery.type,
-      });
-    }
-
-    const sortField = ALLOW_TO_SORT.find((sort) => sort.name === reqQuery.sort);
-
+    const sortField = [
+      { name: 'name', alias: `${targetName}.name` },
+      { name: 'created_at', alias: `${targetName}.createdAt` },
+    ].find((sort) => sort.name === reqQuery.sort);
     if (sortField) {
       query.orderBy(sortField.alias, reqQuery.order as OrderDirectionEnum);
     } else {
       query.orderBy(`${targetName}.createdAt`, OrderDirectionEnum.Asc);
     }
 
-    query
-      .limit(reqQuery.limit ?? 10)
-      .offset((reqQuery.page - 1) * (reqQuery.limit ?? 0));
+    query.limit(reqQuery.limit).offset(reqQuery.offset);
 
     const [data, total] = await query.getManyAndCount();
 
-    const metaDto = new OffsetPaginationDto(total, {
-      limit: reqQuery.limit,
-      offset: reqQuery.page,
-    });
+    const pagination = plainToInstance(
+      OffsetPaginationDto,
+      new OffsetPaginationDto(total, reqQuery),
+      { excludeExtraneousValues: true },
+    );
 
-    return {
-      data,
-      pagination: metaDto,
-    };
+    return { data, pagination };
+  }
+
+  private applyFilters(
+    query: SelectQueryBuilder<CriteriaEntity>,
+    req: CriteriaPaginationReqQuery,
+    targetName: string,
+  ) {
+    if (req.search) {
+      query.where(`${targetName}.name ILIKE :search`, {
+        search: `%${req.search}%`,
+      });
+    }
+
+    if (req.type) {
+      query.andWhere(`${targetName}.type = :type`, {
+        type: req.type,
+      });
+    }
   }
 }

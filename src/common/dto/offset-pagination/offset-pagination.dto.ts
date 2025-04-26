@@ -1,4 +1,8 @@
 import { OrderDirectionType } from '@/common/enums/sort.enum';
+import {
+  DEFAULT_CURRENT_PAGE,
+  DEFAULT_PAGE_LIMIT,
+} from '@/constants/app.constant';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 import { PageOptionsDto } from './page-options.dto';
@@ -28,18 +32,20 @@ export class OffsetPaginationDto {
   @Expose()
   readonly totalPages: number;
 
-  constructor(totalRecords: number, pageOptions: PageOptionsDto) {
-    this.limit = pageOptions.limit;
-    this.currentPage = pageOptions.page;
+  constructor(totalRecords: number, pageOptions?: PageOptionsDto) {
+    this.limit = pageOptions?.limit ?? DEFAULT_PAGE_LIMIT;
+    this.currentPage = pageOptions?.page ?? DEFAULT_CURRENT_PAGE;
+    this.totalRecords = totalRecords;
+
+    this.totalPages = this.limit > 0 ? Math.ceil(totalRecords / this.limit) : 0;
+
     this.nextPage =
       this.currentPage < this.totalPages ? this.currentPage + 1 : undefined;
+
     this.previousPage =
-      this.currentPage > 1 && this.currentPage - 1 < this.totalPages
+      this.currentPage > 1 && this.currentPage - 1 <= this.totalPages
         ? this.currentPage - 1
         : undefined;
-    this.totalRecords = totalRecords;
-    this.totalPages =
-      this.limit > 0 ? Math.ceil(totalRecords / pageOptions.limit) : 0;
   }
 
   getOrder(order?: OrderDirectionType): OrderDirectionType {
