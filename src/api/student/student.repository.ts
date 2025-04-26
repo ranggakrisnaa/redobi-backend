@@ -1,11 +1,12 @@
 import { OffsetPaginationDto } from '@/common/dto/offset-pagination/offset-pagination.dto';
 import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
-import { OrderDirectionEnum } from '@/common/enums/sort.enum';
 import { StudentEntity } from '@/database/entities/student.entity';
 import { IStudent } from '@/database/interface-model/student-entity.interface';
+import { toOrderEnum } from '@/utils/util';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { plainToInstance } from 'class-transformer';
+import { In, Repository, SelectQueryBuilder } from 'typeorm';
 import { StudentPaginationReqQuery } from './dto/query.req.dto';
 
 @Injectable()
@@ -21,59 +22,65 @@ export class StudentRepository extends Repository<StudentEntity> {
     reqQuery: StudentPaginationReqQuery,
   ): Promise<OffsetPaginatedDto<IStudent>> {
     const targetName = this.repo.metadata.targetName;
-    const ALLOW_TO_SORT = [
-      { name: 'full_name', alias: `${targetName}.full_name` },
-      { name: 'created_at', alias: `${targetName}.createdAt` },
-    ];
     const query = this.repo.createQueryBuilder(targetName);
 
-    if (reqQuery.class) {
-      query.andWhere(`${targetName}.class = :class`, {
-        class: reqQuery.class,
-      });
-    }
+    this.applyFilters(query, reqQuery, targetName);
 
-    if (reqQuery.major) {
-      query.andWhere(`${targetName}.major = :major`, {
-        major: reqQuery.major,
-      });
-    }
-
-    if (reqQuery.search) {
-      query.andWhere(`${targetName}.full_name ILIKE :search`, {
-        search: `%${reqQuery.search}%`,
-      });
-    }
-
-    if (reqQuery.tahun_masuk) {
-      query.andWhere(`${targetName}.tahunMasuk = :tahunMasuk`, {
-        tahunMasuk: reqQuery.tahun_masuk,
-      });
-    }
-
-    const sortField = ALLOW_TO_SORT.find((sort) => sort.name === reqQuery.sort);
+    const sortField = [
+      { name: 'full_name', alias: `${targetName}.full_name` },
+      { name: 'created_at', alias: `${targetName}.createdAt` },
+    ].find((sort) => sort.name === reqQuery.sort);
 
     if (sortField) {
-      query.orderBy(sortField.alias, reqQuery.order as OrderDirectionEnum);
+      query.orderBy(sortField.alias, toOrderEnum(reqQuery.order));
     } else {
-      query.orderBy(`${targetName}.createdAt`, OrderDirectionEnum.Desc);
+      query.orderBy(`${targetName}.createdAt`, toOrderEnum(reqQuery.order));
     }
 
-    query
-      .limit(reqQuery.limit ?? 10)
-      .offset((reqQuery.page - 1) * (reqQuery.limit ?? 0));
+    query.limit(reqQuery.limit).offset(reqQuery.offset);
 
     const [data, total] = await query.getManyAndCount();
 
-    const metaDto = new OffsetPaginationDto(total, {
-      limit: reqQuery.limit,
-      offset: reqQuery.page,
-    });
+    const pagination = plainToInstance(
+      OffsetPaginationDto,
+      new OffsetPaginationDto(total, reqQuery),
+      { excludeExtraneousValues: true },
+    );
 
     return {
       data,
-      pagination: metaDto,
+      pagination: pagination,
     };
+  }
+
+  private applyFilters(
+    query: SelectQueryBuilder<StudentEntity>,
+    req: StudentPaginationReqQuery,
+    targetName: string,
+  ) {
+    if (req.class) {
+      query.andWhere(`${targetName}.class = :class`, {
+        class: req.class,
+      });
+    }
+
+    if (req.major) {
+      query.andWhere(`${targetName}.major = :major`, {
+        major: req.major,
+      });
+    }
+
+    if (req.search) {
+      query.andWhere(`${targetName}.full_name ILIKE :search`, {
+        search: `%${req.search}%`,
+      });
+    }
+
+    if (req.tahun_masuk) {
+      query.andWhere(`${targetName}.tahunMasuk = :tahunMasuk`, {
+        tahunMasuk: req.tahun_masuk,
+      });
+    }
   }
 
   async bulkCreate(data: IStudent[]): Promise<IStudent[]> {

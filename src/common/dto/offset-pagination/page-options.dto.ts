@@ -1,7 +1,7 @@
+import { OrderDirectionEnum } from '@/common/enums/sort.enum';
 import {
   DEFAULT_CURRENT_PAGE,
   DEFAULT_PAGE_LIMIT,
-  Order,
 } from '@/constants/app.constant';
 import {
   EnumFieldOptional,
@@ -27,8 +27,10 @@ export class PageOptionsDto {
   @StringFieldOptional()
   readonly q?: string;
 
-  @EnumFieldOptional(() => Order, { default: Order.ASC })
-  readonly order?: Order = Order.ASC;
+  @EnumFieldOptional(() => OrderDirectionEnum, {
+    default: OrderDirectionEnum.Asc,
+  })
+  readonly order?: OrderDirectionEnum = OrderDirectionEnum.Asc;
 
   get offset() {
     return this.page ? (this.page - 1) * this.limit : 0;

@@ -1,10 +1,11 @@
 import { OffsetPaginationDto } from '@/common/dto/offset-pagination/offset-pagination.dto';
 import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
-import { OrderDirectionEnum } from '@/common/enums/sort.enum';
 import { LecturerEntity } from '@/database/entities/lecturer.entity';
 import { ILecturer } from '@/database/interface-model/lecturer-entity.interface';
+import { toOrderEnum } from '@/utils/util';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { plainToInstance } from 'class-transformer';
+import { In, Repository, SelectQueryBuilder } from 'typeorm';
 import { LecturerPaginationReqQuery } from './dto/query.dto';
 
 export class LecturerRepository extends Repository<LecturerEntity> {
@@ -19,52 +20,56 @@ export class LecturerRepository extends Repository<LecturerEntity> {
     reqQuery: LecturerPaginationReqQuery,
   ): Promise<OffsetPaginatedDto<ILecturer>> {
     const targetName = this.repo.metadata.targetName;
-    const ALLOW_TO_SORT = [
-      { name: 'full_name', alias: `${targetName}.full_name` },
-      { name: 'created_at', alias: `${targetName}.createdAt` },
-    ];
     const query = this.createQueryBuilder(targetName);
 
-    if (reqQuery.search) {
-      query.andWhere(`${targetName}.full_name ILIKE :search`, {
-        search: `%${reqQuery.search}%`,
-      });
-    }
+    this.applyFilters(query, reqQuery, targetName);
 
-    if (reqQuery.prodi) {
-      query.andWhere(`${targetName}.prodi = :prodi`, {
-        prodi: reqQuery.prodi,
-      });
-    }
+    const sortField = [
+      { name: 'full_name', alias: `${targetName}.full_name` },
+      { name: 'created_at', alias: `${targetName}.createdAt` },
+    ].find((sort) => sort.name === reqQuery.sort);
 
-    if (reqQuery.tipe_pembimbing) {
-      query.andWhere(`${targetName}.tipePembimbing = :tipePembimbing`, {
-        tipePembimbing: reqQuery.tipe_pembimbing,
-      });
-    }
-
-    const sortField = ALLOW_TO_SORT.find((sort) => sort.name === reqQuery.sort);
     if (sortField) {
-      query.orderBy(sortField.alias, reqQuery.order as OrderDirectionEnum);
+      query.orderBy(sortField.alias, toOrderEnum(reqQuery.order));
     } else {
-      query.orderBy(`${targetName}.createdAt`, OrderDirectionEnum.Asc);
+      query.orderBy(`${targetName}.createdAt`, toOrderEnum(reqQuery.order));
     }
 
-    query
-      .limit(reqQuery.limit ?? 10)
-      .offset((reqQuery.page - 1) * (reqQuery.limit ?? 0));
+    query.limit(reqQuery.limit).offset(reqQuery.offset);
 
     const [data, total] = await query.getManyAndCount();
 
-    const metaDto = new OffsetPaginationDto(total, {
-      limit: reqQuery.limit,
-      offset: reqQuery.page,
-    });
+    const pagination = plainToInstance(
+      OffsetPaginationDto,
+      new OffsetPaginationDto(total, reqQuery),
+      { excludeExtraneousValues: true },
+    );
 
-    return {
-      data,
-      pagination: metaDto,
-    };
+    return { data, pagination };
+  }
+
+  private applyFilters(
+    query: SelectQueryBuilder<LecturerEntity>,
+    req: LecturerPaginationReqQuery,
+    targetName: string,
+  ) {
+    if (req.search) {
+      query.andWhere(`${targetName}.full_name ILIKE :search`, {
+        search: `%${req.search}%`,
+      });
+    }
+
+    if (req.prodi) {
+      query.andWhere(`${targetName}.prodi = :prodi`, { prodi: req.prodi });
+    }
+
+    if (req.tipe_pembimbing) {
+      query.andWhere(`${targetName}.tipePembimbing = :tipePembimbing`, {
+        tipePembimbing: req.tipe_pembimbing,
+      });
+    }
+
+    return query;
   }
 
   async bulkCreate(data: ILecturer[]): Promise<ILecturer[]> {
