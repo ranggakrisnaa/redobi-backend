@@ -6,9 +6,9 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { IKeyword } from '../interface-model/keyword-entity.interface';
-import { IThesisKeyword } from '../interface-model/thesis_keyword-entity.interface';
+import { IThesisKeyword } from '../interface-model/thesis-keyword-entity.interface';
 import { AbstractEntity } from './abstract.entity';
-import { ThesisKeywordsEntity } from './thesis_keyword.entity';
+import { ThesisKeywordsEntity } from './thesis-keyword.entity';
 
 @Entity('keywords')
 export class KeywordsEntity extends AbstractEntity implements IKeyword {

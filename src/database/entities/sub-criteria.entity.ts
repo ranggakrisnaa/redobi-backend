@@ -36,7 +36,6 @@ export class SubCriteriaEntity extends AbstractEntity implements ISubCriteria {
 
   @Column({ type: 'int', name: 'criteria_id' })
   criteriaId: number;
-
   @JoinColumn({
     name: 'criteria_id',
     referencedColumnName: 'id',
