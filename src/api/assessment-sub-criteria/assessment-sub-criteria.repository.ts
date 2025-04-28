@@ -24,4 +24,18 @@ export class AssessmentSubCriteriaRepository extends Repository<AssessmentSubCri
       entities,
     );
   }
+
+  async updateWithTransaction(
+    queryRunner: QueryRunner,
+    assessmentCriteria: Partial<IAssessmentSubCriteria[]>,
+  ): Promise<Partial<IAssessmentSubCriteria[]>> {
+    const entities = assessmentCriteria.map((data) => ({
+      ...data,
+    }));
+
+    return await queryRunner.manager.save(
+      AssessmentSubCriteriaEntity,
+      entities,
+    );
+  }
 }

@@ -41,7 +41,9 @@ export class SubCriteriaEntity extends AbstractEntity implements ISubCriteria {
     referencedColumnName: 'id',
     foreignKeyConstraintName: 'FK_criteria_sub_criteria',
   })
-  @ManyToOne(() => CriteriaEntity, (criteria) => criteria.subCriteria)
+  @ManyToOne(() => CriteriaEntity, (criteria) => criteria.subCriteria, {
+    onDelete: 'CASCADE',
+  })
   criteria!: ICriteria;
 
   @OneToMany(

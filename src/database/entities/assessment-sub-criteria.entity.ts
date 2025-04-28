@@ -39,7 +39,9 @@ export class AssessmentSubCriteriaEntity
     referencedColumnName: 'id',
     foreignKeyConstraintName: 'FK_assessment_sub_criteria',
   })
-  @ManyToOne(() => SubCriteriaEntity, (sub) => sub.assessmentSubCriteria)
+  @ManyToOne(() => SubCriteriaEntity, (sub) => sub.assessmentSubCriteria, {
+    onDelete: 'CASCADE',
+  })
   subCriteria!: ISubCriteria;
 
   @JoinColumn({
@@ -50,6 +52,9 @@ export class AssessmentSubCriteriaEntity
   @ManyToOne(
     () => AssessmentEntity,
     (assessment) => assessment.assessmentSubCriteria,
+    {
+      onDelete: 'CASCADE',
+    },
   )
   assessment!: IAssessment;
 }

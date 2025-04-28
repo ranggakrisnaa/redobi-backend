@@ -43,7 +43,7 @@ export class CriteriaController {
     summary: 'Get detail criteria',
   })
   @Get(':criteriaId')
-  async Detail(@Param('criteriaId') criteriaId: string) {
+  async Detail(@Param('criteriaId') criteriaId: string): Promise<ICriteria> {
     return await this.criteriaService.Detail(+criteriaId);
   }
 
@@ -52,7 +52,7 @@ export class CriteriaController {
     summary: 'Create criteria',
   })
   @Post()
-  async Create(@Body() req: CreateCriteriaDto) {
+  async Create(@Body() req: CreateCriteriaDto): Promise<Partial<ICriteria>> {
     return await this.criteriaService.Create(req);
   }
 
@@ -64,7 +64,7 @@ export class CriteriaController {
   async Update(
     @Body() req: UpdateCriteriaDto,
     @Param('criteriaId') criteriaId: string,
-  ) {
+  ): Promise<ICriteria> {
     return await this.criteriaService.Update(req, +criteriaId);
   }
 
@@ -75,7 +75,7 @@ export class CriteriaController {
   async Delete(
     @Param('criteriaId') criteriaId: string,
     @Body() req: DeleteCriteriaDto,
-  ) {
+  ): Promise<Partial<ICriteria> | Partial<ICriteria>[]> {
     return await this.criteriaService.Delete(+criteriaId, req);
   }
 }

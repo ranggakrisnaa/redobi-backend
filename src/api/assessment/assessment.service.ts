@@ -1,4 +1,5 @@
 import { Uuid } from '@/common/types/common.type';
+import { IAssessment } from '@/database/interface-model/assessment-entity.interface';
 import { IAssessmentSubCriteria } from '@/database/interface-model/assessment-sub-criteria-entity.interface';
 import {
   BadRequestException,
@@ -12,6 +13,8 @@ import { LecturerRepository } from '../lecturer/lecturer.repository';
 import { SubCriteriaRepository } from '../sub-criteria/sub-criteria.repository';
 import { AssessmentRepository } from './assessment.repository';
 import { CreateAssessmentDto } from './dto/create.dto';
+import { DeleteAssessmentDto } from './dto/delete.dto';
+import { UpdateAssessmentDto } from './dto/update.dto';
 
 @Injectable()
 export class AssessmentService {
@@ -23,7 +26,7 @@ export class AssessmentService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async Create(req: CreateAssessmentDto) {
+  async Create(req: CreateAssessmentDto): Promise<Partial<IAssessment>> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -95,6 +98,78 @@ export class AssessmentService {
       );
     } finally {
       await queryRunner.release();
+    }
+  }
+
+  async Update(req: UpdateAssessmentDto, assessmentId: string) {
+    const foundAssessment = await this.assessmentRepository.findOne({
+      where: { id: assessmentId as Uuid },
+      relations: ['assessmentSubCriteria'],
+    });
+    if (!foundAssessment || foundAssessment.assessmentSubCriteria.length < 1) {
+      throw new NotFoundException('Assessment data is not found.');
+    }
+    if (
+      foundAssessment.assessmentSubCriteria.map((data) => data.subCriteria)
+        .length !== req.scores.length
+    ) {
+      throw new BadRequestException(
+        'Score length must be equal to sub criteria length.',
+      );
+    }
+
+    try {
+      const updateAssessmentSubCriteria =
+        foundAssessment.assessmentSubCriteria.map((subCriteria, index) => ({
+          id: subCriteria.id,
+          subCriteriaId: subCriteria.subCriteriaId,
+          assessmentId: foundAssessment.id,
+          score: req.scores[index],
+        }));
+
+      await this.assessmentSubCriteriaRepository.save(
+        updateAssessmentSubCriteria,
+      );
+
+      return CreateAssessmentDto.toResponse(foundAssessment);
+    } catch (err: unknown) {
+      throw new InternalServerErrorException(
+        err instanceof Error ? err.message : 'Unexpected error',
+      );
+    }
+  }
+
+  async Delete(assessmentId: string, req: DeleteAssessmentDto) {
+    try {
+      if (Array.isArray(req.assessmentIds) && req.assessmentIds.length > 0) {
+        const foundAssessments = await this.assessmentRepository.find({
+          where: { id: In(req.assessmentIds) },
+          relations: ['assessmentSubCriteria'],
+        });
+        if (foundAssessments.length < 1) {
+          throw new NotFoundException('Assessment data is not found.');
+        }
+        await this.assessmentRepository.delete(req.assessmentIds);
+
+        return foundAssessments.map((assessment) =>
+          CreateAssessmentDto.toResponse(assessment),
+        );
+      } else {
+        const foundAssessment = await this.assessmentRepository.findOne({
+          where: { id: assessmentId as Uuid },
+          relations: ['assessmentSubCriteria'],
+        });
+        if (!foundAssessment) {
+          throw new NotFoundException('Assessment data is not found.');
+        }
+        await this.assessmentRepository.delete(assessmentId);
+
+        return CreateAssessmentDto.toResponse(foundAssessment);
+      }
+    } catch (err: unknown) {
+      throw new InternalServerErrorException(
+        err instanceof Error ? err.message : 'Unexpected error',
+      );
     }
   }
 }

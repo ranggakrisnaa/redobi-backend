@@ -168,10 +168,6 @@ export class CriteriaService {
           throw new NotFoundException('Criteria data is not found.');
         }
 
-        await this.subCriteriaRepository.delete({
-          criteriaId: In(req.criteriaIds),
-        });
-
         await this.criteriaRepository.delete(req.criteriaIds);
 
         return foundCriteria.map((criteria) =>
@@ -190,10 +186,6 @@ export class CriteriaService {
         if (!foundCriteria) {
           throw new NotFoundException('Criteria data is not found.');
         }
-
-        await this.subCriteriaRepository.delete({
-          criteriaId,
-        });
 
         await this.criteriaRepository.delete(criteriaId);
 
