@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AssessmentSubCriteriaModule } from './assessment-sub-criteria/assessment-sub-criteria.module';
 import { AssessmentModule } from './assessment/assessment.module';
 import { AuthModule } from './auth/auth.module';
 import { CriteriaModule } from './criteria/criteria.module';
@@ -22,6 +23,7 @@ import { UserModule } from './user/user.module';
     CriteriaModule,
     SubCriteriaModule,
     AssessmentModule,
+    AssessmentSubCriteriaModule,
   ],
 })
 export class ApiModule {}

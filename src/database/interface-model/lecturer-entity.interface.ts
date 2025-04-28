@@ -1,7 +1,7 @@
 import { Uuid } from '@/common/types/common.type';
 import { ProdiEnum } from '../enums/prodi.enum';
 import { TipePembimbingEnum } from '../enums/tipe-pembimbing.enum';
-import { IAssessmentSubCriteria } from './assessment-criteria-entity.interface';
+import { IAssessment } from './assessment-entity.interface';
 import { IBaseEntity } from './base-entity.interface';
 import { IReccomendation } from './reccomendation-entity.interface';
 import { ISelection } from './selection-entity.interface';
@@ -20,5 +20,5 @@ export interface ILecturer extends IBaseEntity {
   user?: IUser;
   selection?: ISelection[];
   reccomendation?: IReccomendation[];
-  assessmentSubcriteria?: IAssessmentSubCriteria[];
+  assessment?: IAssessment[];
 }

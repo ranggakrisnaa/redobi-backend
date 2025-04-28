@@ -1,4 +1,13 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Uuid } from '@/common/types/common.type';
+import { IAssessmentSubCriteria } from '@/database/interface-model/assessment-sub-criteria-entity.interface';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
+import { DataSource, In } from 'typeorm';
+import { AssessmentSubCriteriaRepository } from '../assessment-sub-criteria/assessment-sub-criteria.repository';
 import { LecturerRepository } from '../lecturer/lecturer.repository';
 import { SubCriteriaRepository } from '../sub-criteria/sub-criteria.repository';
 import { AssessmentRepository } from './assessment.repository';
@@ -8,56 +17,84 @@ import { CreateAssessmentDto } from './dto/create.dto';
 export class AssessmentService {
   constructor(
     private readonly assessmentRepository: AssessmentRepository,
+    private readonly assessmentSubCriteriaRepository: AssessmentSubCriteriaRepository,
     private readonly subCriteriaRepository: SubCriteriaRepository,
     private readonly lecturerRepository: LecturerRepository,
+    private readonly dataSource: DataSource,
   ) {}
 
   async Create(req: CreateAssessmentDto) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
     try {
-      // const [foundSubCriteria, foundLecturer] = await Promise.all([
-      //   this.subCriteriaRepository.find({
-      //     where: { id: In(req.subCriteriaIds) },
-      //     select: ['id'],
-      //   }),
-      //   this.lecturerRepository.findOne({
-      //     where: { id: req.lecturerId as Uuid },
-      //   }),
-      // ]);
-      // if (foundSubCriteria.length !== req.scores.length) {
-      //   throw new BadRequestException(
-      //     'Score length must be equal to sub criteria length.',
-      //   );
-      // }
-      // if (!foundLecturer) {
-      //   throw new NotFoundException('Lecturer data is not found.');
-      // }
-      // const existingAssessments = await this.assessmentRepository.find({
-      //   where: {
-      //     lecturerId: req.lecturerId as Uuid,
-      //     subCriteriaId: In(req.subCriteriaIds as unknown as number[]),
-      //   },
-      // });
-      // if (existingAssessments.length > 0) {
-      //   throw new BadRequestException('Assessment data already exists.');
-      // }
-      // const newAssessments = foundSubCriteria.map((subCriteria, index) => ({
-      //   subCriteriaId: subCriteria.id,
-      //   lecturerId: foundLecturer.id,
-      //   score: req.scores[index],
-      // }));
-      // const savedAssessments =
-      //   await this.assessmentRepository.save(newAssessments);
-      // return savedAssessments.map((assessment) =>
-      //   CreateAssessmentDto.toResponse({
-      //     ...assessment,
-      //     scores: [assessment.score],
-      //     subCriteriaIds: [assessment.subCriteriaId],
-      //   }),
-      // );
+      const [foundSubCriteria, foundLecturer] = await Promise.all([
+        this.subCriteriaRepository.find({
+          where: { id: In(req.subCriteriaIds) },
+          select: ['id'],
+        }),
+        this.lecturerRepository.findOne({
+          where: { id: req.lecturerId as Uuid },
+        }),
+      ]);
+      if (foundSubCriteria.length < 1) {
+        throw new NotFoundException('Sub Criteria data is not found.');
+      }
+
+      if (!foundLecturer) {
+        throw new NotFoundException('Lecturer data is not found.');
+      }
+
+      if (foundSubCriteria.length !== req.scores.length) {
+        throw new BadRequestException(
+          'Score length must be equal to sub criteria length.',
+        );
+      }
+
+      const existingAssessments = await this.assessmentRepository.find({
+        where: {
+          lecturerId: foundLecturer.id,
+          assessmentSubCriteria: {
+            subCriteriaId: In(req.subCriteriaIds as unknown as number[]),
+          },
+        },
+      });
+
+      if (existingAssessments.length > 0) {
+        throw new BadRequestException('Assessment data already exists.');
+      }
+
+      const newAssessment =
+        await this.assessmentRepository.createWithTransaction(
+          queryRunner,
+          foundLecturer.id,
+        );
+
+      const newAssessmentsSubCriteria = foundSubCriteria.map(
+        (subCriteria, index) => ({
+          subCriteriaId: subCriteria.id,
+          score: req.scores[index],
+          assessmentId: newAssessment.id,
+        }),
+      );
+
+      await this.assessmentSubCriteriaRepository.createtWithTransaction(
+        queryRunner,
+        newAssessmentsSubCriteria as IAssessmentSubCriteria[],
+      );
+
+      await queryRunner.commitTransaction();
+
+      return CreateAssessmentDto.toResponse(newAssessment);
     } catch (err: unknown) {
+      await queryRunner.rollbackTransaction();
+
       throw new InternalServerErrorException(
         err instanceof Error ? err.message : 'Unexpected error',
       );
+    } finally {
+      await queryRunner.release();
     }
   }
 }

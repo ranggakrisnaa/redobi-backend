@@ -6,7 +6,7 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { IAssessmentSubCriteria } from '../interface-model/assessment-criteria-entity.interface';
+import { IAssessmentSubCriteria } from '../interface-model/assessment-sub-criteria-entity.interface';
 import { ICriteria } from '../interface-model/criteria-entity.interface';
 import { ISubCriteria } from '../interface-model/sub-criteria-entity.entity';
 import { AbstractEntity } from './abstract.entity';

@@ -1,10 +1,12 @@
+import { Uuid } from '@/common/types/common.type';
 import { NumberField, StringField } from '@/decorators/field.decorators';
 
 export class CreateAssessmentDto {
-  id: number;
+  id: Uuid;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
+
   @StringField()
   lecturerId: string;
 
@@ -14,12 +16,12 @@ export class CreateAssessmentDto {
   @NumberField({ each: true })
   scores: number[];
 
-  static toResponse(dto: CreateAssessmentDto) {
+  static toResponse(dto: Partial<CreateAssessmentDto>) {
     return {
       id: dto.id,
-      lecturerId: dto.lecturerId,
-      subCriteriaId: dto.subCriteriaIds[0],
-      score: dto.scores[0],
+      createdAt: dto.createdAt,
+      updatedAt: dto.updatedAt,
+      deletedAt: dto.deletedAt,
     };
   }
 }

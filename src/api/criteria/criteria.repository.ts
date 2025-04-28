@@ -5,7 +5,7 @@ import { CriteriaEntity } from '@/database/entities/criteria.entity';
 import { ICriteria } from '@/database/interface-model/criteria-entity.interface';
 import { InjectRepository } from '@nestjs/typeorm';
 import { plainToInstance } from 'class-transformer';
-import { Repository, SelectQueryBuilder } from 'typeorm';
+import { QueryRunner, Repository, SelectQueryBuilder } from 'typeorm';
 import { CriteriaPaginationReqQuery } from './dto/query.dto';
 
 export class CriteriaRepository extends Repository<CriteriaEntity> {
@@ -66,5 +66,14 @@ export class CriteriaRepository extends Repository<CriteriaEntity> {
         type: req.type,
       });
     }
+  }
+
+  async createtWithTransaction(
+    queryRunner: QueryRunner,
+    criteria: Partial<ICriteria>,
+  ): Promise<Partial<ICriteria>> {
+    const entities = this.repo.create(criteria);
+
+    return await queryRunner.manager.save(CriteriaEntity, entities);
   }
 }

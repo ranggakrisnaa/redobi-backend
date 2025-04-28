@@ -1,4 +1,4 @@
-import { IAssessmentSubCriteria } from './assessment-criteria-entity.interface';
+import { IAssessmentSubCriteria } from './assessment-sub-criteria-entity.interface';
 import { IBaseEntity } from './base-entity.interface';
 import { ICriteria } from './criteria-entity.interface';
 

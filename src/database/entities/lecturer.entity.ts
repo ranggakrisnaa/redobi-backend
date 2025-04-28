@@ -10,11 +10,11 @@ import {
 import { Uuid } from '../../common/types/common.type';
 import { ProdiEnum } from '../enums/prodi.enum';
 import { TipePembimbingEnum } from '../enums/tipe-pembimbing.enum';
-import { IAssessmentSubCriteria } from '../interface-model/assessment-criteria-entity.interface';
+import { IAssessment } from '../interface-model/assessment-entity.interface';
 import { ILecturer } from '../interface-model/lecturer-entity.interface';
 import { IReccomendation } from '../interface-model/reccomendation-entity.interface';
 import { AbstractEntity } from './abstract.entity';
-import { AssessmentSubCriteriaEntity } from './assessment-sub-criteria.entity';
+import { AssessmentEntity } from './assesment.entity';
 import { ReccomendationEntity } from './reccomendation.entity';
 import { SelectionEntity } from './selection.entity';
 import { UserEntity } from './user.entity';
@@ -70,9 +70,6 @@ export class LecturerEntity extends AbstractEntity implements ILecturer {
   )
   recomendation?: IReccomendation[];
 
-  @OneToMany(
-    () => AssessmentSubCriteriaEntity,
-    (assessment) => assessment.lecturer,
-  )
-  assessmentSubcriteria?: IAssessmentSubCriteria[];
+  @OneToMany(() => AssessmentEntity, (assessment) => assessment.lecturer)
+  assessment?: IAssessment[];
 }
