@@ -1,10 +1,21 @@
+import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
 import { IAssessment } from '@/database/interface-model/assessment-entity.interface';
 import { ApiAuth } from '@/decorators/http.decorators';
-import { Body, Controller, Delete, Param, Post, Put } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+  Query,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { AssessmentService } from './assessment.service';
 import { CreateAssessmentDto } from './dto/create.dto';
 import { DeleteAssessmentDto } from './dto/delete.dto';
+import { AssessmentPaginationReqQuery } from './dto/query.dto';
 import { UpdateAssessmentDto } from './dto/update.dto';
 
 @ApiTags('assessments')
@@ -14,6 +25,26 @@ import { UpdateAssessmentDto } from './dto/update.dto';
 })
 export class AssessmentController {
   constructor(private readonly assessmentService: AssessmentService) {}
+
+  @ApiAuth({
+    summary: 'Pagination Assessment',
+  })
+  @Get()
+  async Pagination(
+    @Query() reqQuery: AssessmentPaginationReqQuery,
+  ): Promise<OffsetPaginatedDto<IAssessment>> {
+    return await this.assessmentService.Pagination(reqQuery);
+  }
+
+  @ApiAuth({
+    summary: 'Pagination Assessment',
+  })
+  @Get(':assessmentId')
+  async Detail(
+    @Param('assessmentId') assessmentId: string,
+  ): Promise<IAssessment> {
+    return await this.assessmentService.Detail(assessmentId);
+  }
 
   @ApiAuth({
     summary: 'Create Assessment',

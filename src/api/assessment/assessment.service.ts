@@ -1,3 +1,4 @@
+import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
 import { Uuid } from '@/common/types/common.type';
 import { IAssessment } from '@/database/interface-model/assessment-entity.interface';
 import { IAssessmentSubCriteria } from '@/database/interface-model/assessment-sub-criteria-entity.interface';
@@ -14,6 +15,7 @@ import { SubCriteriaRepository } from '../sub-criteria/sub-criteria.repository';
 import { AssessmentRepository } from './assessment.repository';
 import { CreateAssessmentDto } from './dto/create.dto';
 import { DeleteAssessmentDto } from './dto/delete.dto';
+import { AssessmentPaginationReqQuery } from './dto/query.dto';
 import { UpdateAssessmentDto } from './dto/update.dto';
 
 @Injectable()
@@ -25,6 +27,23 @@ export class AssessmentService {
     private readonly lecturerRepository: LecturerRepository,
     private readonly dataSource: DataSource,
   ) {}
+
+  async Pagination(
+    reqQuery: AssessmentPaginationReqQuery,
+  ): Promise<OffsetPaginatedDto<IAssessment>> {
+    return await this.assessmentRepository.Pagination(reqQuery);
+  }
+
+  async Detail(assesmentId: string): Promise<IAssessment> {
+    const foundAssessment = await this.assessmentRepository.findOne({
+      where: { id: assesmentId as Uuid },
+      relations: ['assessmentSubCriteria', 'lecturer'],
+    });
+    if (!foundAssessment) {
+      throw new NotFoundException('Assessment data is not found.');
+    }
+    return foundAssessment;
+  }
 
   async Create(req: CreateAssessmentDto): Promise<Partial<IAssessment>> {
     const queryRunner = this.dataSource.createQueryRunner();
