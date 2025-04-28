@@ -6,11 +6,11 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { IAssessment } from '../interface-model/assessment-entity.interface';
+import { IAssessmentSubCriteria } from '../interface-model/assessment-criteria-entity.interface';
 import { ICriteria } from '../interface-model/criteria-entity.interface';
 import { ISubCriteria } from '../interface-model/sub-criteria-entity.entity';
 import { AbstractEntity } from './abstract.entity';
-import { AssessmentEntity } from './assesment.entity';
+import { AssessmentSubCriteriaEntity } from './assessment-sub-criteria.entity';
 import { CriteriaEntity } from './criteria.entity';
 
 @Entity('sub_criteria')
@@ -44,6 +44,9 @@ export class SubCriteriaEntity extends AbstractEntity implements ISubCriteria {
   @ManyToOne(() => CriteriaEntity, (criteria) => criteria.subCriteria)
   criteria!: ICriteria;
 
-  @OneToMany(() => AssessmentEntity, (assessment) => assessment.subCriteria)
-  assessment?: IAssessment[];
+  @OneToMany(
+    () => AssessmentSubCriteriaEntity,
+    (assessmentSub) => assessmentSub.subCriteria,
+  )
+  assessmentSubCriteria?: IAssessmentSubCriteria[];
 }

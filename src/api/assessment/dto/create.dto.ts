@@ -18,8 +18,8 @@ export class CreateAssessmentDto {
     return {
       id: dto.id,
       lecturerId: dto.lecturerId,
-      subCriteriaId: dto.subCriteriaIds,
-      scores: dto.scores,
+      subCriteriaId: dto.subCriteriaIds[0],
+      score: dto.scores[0],
     };
   }
 }

@@ -4,7 +4,7 @@ import { ILecturer } from './lecturer-entity.interface';
 import { IStudent } from './student-entity.interface';
 
 export interface IReccomendation extends IBaseEntity {
-  id: number;
+  id: Uuid;
   studentId: Uuid;
   lecturerId: Uuid;
   reccomendationScore: number;

@@ -20,4 +20,11 @@ export class AssessmentController {
   async Create(@Body() req: CreateAssessmentDto) {
     return await this.assessmentService.Create(req);
   }
+
+  @ApiAuth({
+    summary: 'Update Assessment',
+    type: CreateAssessmentDto,
+  })
+  @Post()
+  async Update() {}
 }

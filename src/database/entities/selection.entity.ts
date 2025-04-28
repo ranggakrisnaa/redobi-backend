@@ -15,15 +15,15 @@ import { StudentEntity } from './student.entity';
 
 @Entity('selections')
 export class SelectionEntity extends AbstractEntity implements ISelection {
-  @PrimaryGeneratedColumn('increment', {
+  @PrimaryGeneratedColumn('uuid', {
     primaryKeyConstraintName: 'PK_selections_id',
   })
-  id: number;
+  id: Uuid;
 
-  @Column({ type: 'int', name: 'student_id' })
+  @Column({ type: 'uuid', name: 'student_id' })
   studentId: Uuid;
 
-  @Column({ type: 'int', name: 'lecturer_id' })
+  @Column({ type: 'uuid', name: 'lecturer_id' })
   lecturerId: Uuid;
 
   @JoinColumn({
