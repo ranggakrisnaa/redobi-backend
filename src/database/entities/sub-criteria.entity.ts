@@ -6,11 +6,11 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { IAssessment } from '../interface-model/assessment-entity.interface';
+import { IAssessmentSubCriteria } from '../interface-model/assessment-sub-criteria-entity.interface';
 import { ICriteria } from '../interface-model/criteria-entity.interface';
 import { ISubCriteria } from '../interface-model/sub-criteria-entity.entity';
 import { AbstractEntity } from './abstract.entity';
-import { AssessmentEntity } from './assesment.entity';
+import { AssessmentSubCriteriaEntity } from './assessment-sub-criteria.entity';
 import { CriteriaEntity } from './criteria.entity';
 
 @Entity('sub_criteria')
@@ -36,15 +36,19 @@ export class SubCriteriaEntity extends AbstractEntity implements ISubCriteria {
 
   @Column({ type: 'int', name: 'criteria_id' })
   criteriaId: number;
-
   @JoinColumn({
     name: 'criteria_id',
     referencedColumnName: 'id',
     foreignKeyConstraintName: 'FK_criteria_sub_criteria',
   })
-  @ManyToOne(() => CriteriaEntity, (criteria) => criteria.subCriteria)
+  @ManyToOne(() => CriteriaEntity, (criteria) => criteria.subCriteria, {
+    onDelete: 'CASCADE',
+  })
   criteria!: ICriteria;
 
-  @OneToMany(() => AssessmentEntity, (assessment) => assessment.subCriteria)
-  assessment?: IAssessment[];
+  @OneToMany(
+    () => AssessmentSubCriteriaEntity,
+    (assessmentSub) => assessmentSub.subCriteria,
+  )
+  assessmentSubCriteria?: IAssessmentSubCriteria[];
 }

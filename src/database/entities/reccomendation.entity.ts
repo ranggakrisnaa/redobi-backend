@@ -18,15 +18,15 @@ export class ReccomendationEntity
   extends AbstractEntity
   implements IReccomendation
 {
-  @PrimaryGeneratedColumn('increment', {
+  @PrimaryGeneratedColumn('uuid', {
     primaryKeyConstraintName: 'PK_reccomendations_id',
   })
-  id: number;
+  id: Uuid;
 
-  @Column({ type: 'int', name: 'student_id' })
+  @Column({ type: 'uuid', name: 'student_id' })
   studentId: Uuid;
 
-  @Column({ type: 'int', name: 'lecturer_id' })
+  @Column({ type: 'uuid', name: 'lecturer_id' })
   lecturerId: Uuid;
 
   @Column({

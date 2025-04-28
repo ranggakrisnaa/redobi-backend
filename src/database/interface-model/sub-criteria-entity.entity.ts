@@ -1,4 +1,4 @@
-import { IAssessment } from './assessment-entity.interface';
+import { IAssessmentSubCriteria } from './assessment-sub-criteria-entity.interface';
 import { IBaseEntity } from './base-entity.interface';
 import { ICriteria } from './criteria-entity.interface';
 
@@ -7,6 +7,6 @@ export interface ISubCriteria extends IBaseEntity {
   name: string;
   weight: number;
   criteria?: ICriteria;
-  assessment?: IAssessment[];
   criteriaId: number;
+  assessmentSubCriteria?: IAssessmentSubCriteria[];
 }

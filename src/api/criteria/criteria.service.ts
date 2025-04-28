@@ -6,7 +6,7 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { In } from 'typeorm';
+import { DataSource, In } from 'typeorm';
 import { SubCriteriaRepository } from '../sub-criteria/sub-criteria.repository';
 import { CriteriaRepository } from './criteria.repository';
 import { CreateCriteriaDto } from './dto/create.dto';
@@ -19,9 +19,14 @@ export class CriteriaService {
   constructor(
     private readonly criteriaRepository: CriteriaRepository,
     private readonly subCriteriaRepository: SubCriteriaRepository,
+    private readonly dataSource: DataSource,
   ) {}
 
   async Create(req: CreateCriteriaDto): Promise<Partial<ICriteria>> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
     const foundCriteria = await this.criteriaRepository.findOneBy({
       name: req.name,
     });
@@ -29,11 +34,14 @@ export class CriteriaService {
       throw new ForbiddenException('Criteria data already exist.');
     }
     try {
-      const criteria = await this.criteriaRepository.save({
-        name: req.name,
-        weight: req.weight,
-        type: req.type,
-      });
+      const criteria = await this.criteriaRepository.createtWithTransaction(
+        queryRunner,
+        {
+          name: req.name,
+          weight: req.weight,
+          type: req.type,
+        },
+      );
 
       let subCriteria = [];
       if (req.subCriteria && req.subCriteria.length > 0) {
@@ -42,7 +50,11 @@ export class CriteriaService {
           criteriaId: criteria.id,
         }));
 
-        await this.subCriteriaRepository.save(subCriteria);
+        await this.subCriteriaRepository.createtWithTransaction(
+          queryRunner,
+          criteria.id,
+          subCriteria,
+        );
       }
 
       const fullEntity = {
@@ -50,11 +62,19 @@ export class CriteriaService {
         subCriteria,
       };
 
-      return CreateCriteriaDto.toResponse(fullEntity) as ICriteria;
+      await queryRunner.commitTransaction();
+
+      return CreateCriteriaDto.toResponse(
+        fullEntity as CreateCriteriaDto,
+      ) as ICriteria;
     } catch (err: unknown) {
+      await queryRunner.rollbackTransaction();
+
       throw new InternalServerErrorException(
         err instanceof Error ? err.message : 'Unexpected error',
       );
+    } finally {
+      await queryRunner.release();
     }
   }
 
@@ -148,10 +168,6 @@ export class CriteriaService {
           throw new NotFoundException('Criteria data is not found.');
         }
 
-        await this.subCriteriaRepository.delete({
-          criteriaId: In(req.criteriaIds),
-        });
-
         await this.criteriaRepository.delete(req.criteriaIds);
 
         return foundCriteria.map((criteria) =>
@@ -170,10 +186,6 @@ export class CriteriaService {
         if (!foundCriteria) {
           throw new NotFoundException('Criteria data is not found.');
         }
-
-        await this.subCriteriaRepository.delete({
-          criteriaId,
-        });
 
         await this.criteriaRepository.delete(criteriaId);
 

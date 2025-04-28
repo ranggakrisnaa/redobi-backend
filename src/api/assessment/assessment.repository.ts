@@ -1,32 +1,34 @@
 import { OffsetPaginationDto } from '@/common/dto/offset-pagination/offset-pagination.dto';
 import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
 import { OrderDirectionEnum } from '@/common/enums/sort.enum';
-import { CriteriaEntity } from '@/database/entities/criteria.entity';
-import { ICriteria } from '@/database/interface-model/criteria-entity.interface';
+import { Uuid } from '@/common/types/common.type';
+import { AssessmentEntity } from '@/database/entities/assesment.entity';
+import { IAssessment } from '@/database/interface-model/assessment-entity.interface';
 import { InjectRepository } from '@nestjs/typeorm';
 import { plainToInstance } from 'class-transformer';
 import { QueryRunner, Repository, SelectQueryBuilder } from 'typeorm';
-import { CriteriaPaginationReqQuery } from './dto/query.dto';
+import { AssessmentPaginationReqQuery } from './dto/query.dto';
 
-export class CriteriaRepository extends Repository<CriteriaEntity> {
+export class AssessmentRepository extends Repository<AssessmentEntity> {
   constructor(
-    @InjectRepository(CriteriaEntity)
-    private readonly repo: Repository<CriteriaEntity>,
+    @InjectRepository(AssessmentEntity)
+    private readonly repo: Repository<AssessmentEntity>,
   ) {
     super(repo.target, repo.manager, repo.queryRunner);
   }
 
   async Pagination(
-    reqQuery: CriteriaPaginationReqQuery,
-  ): Promise<OffsetPaginatedDto<ICriteria>> {
+    reqQuery: AssessmentPaginationReqQuery,
+  ): Promise<OffsetPaginatedDto<IAssessment>> {
     const targetName = this.repo.metadata.targetName;
-    const query = this.createQueryBuilder(targetName).leftJoinAndSelect(
-      `${targetName}.subCriteria`,
-      'subCriteria',
-    );
+    const query = this.createQueryBuilder(targetName)
+      .leftJoinAndSelect(`${targetName}.lecturer`, 'lecturer')
+      .leftJoinAndSelect(
+        `${targetName}.assessmentSubCriteria`,
+        'assessmentSubCriteria',
+      );
 
     this.applyFilters(query, reqQuery, targetName);
-
     const sortField = [
       { name: 'name', alias: `${targetName}.name` },
       { name: 'created_at', alias: `${targetName}.createdAt` },
@@ -51,8 +53,8 @@ export class CriteriaRepository extends Repository<CriteriaEntity> {
   }
 
   private applyFilters(
-    query: SelectQueryBuilder<CriteriaEntity>,
-    req: CriteriaPaginationReqQuery,
+    query: SelectQueryBuilder<AssessmentEntity>,
+    req: AssessmentPaginationReqQuery,
     targetName: string,
   ) {
     if (req.search) {
@@ -60,20 +62,16 @@ export class CriteriaRepository extends Repository<CriteriaEntity> {
         search: `%${req.search}%`,
       });
     }
-
-    if (req.type) {
-      query.andWhere(`${targetName}.type = :type`, {
-        type: req.type,
-      });
-    }
   }
 
-  async createtWithTransaction(
+  async createWithTransaction(
     queryRunner: QueryRunner,
-    criteria: Partial<ICriteria>,
-  ): Promise<Partial<ICriteria>> {
-    const entities = this.repo.create(criteria);
+    lecturerId: string,
+  ): Promise<Partial<IAssessment>> {
+    const assessment = this.repo.create({
+      lecturerId: lecturerId as Uuid,
+    });
 
-    return await queryRunner.manager.save(CriteriaEntity, entities);
+    return await queryRunner.manager.save(AssessmentEntity, assessment);
   }
 }
