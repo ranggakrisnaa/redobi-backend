@@ -31,6 +31,7 @@ export class KeywordsEntity extends AbstractEntity implements IKeyword {
   @ManyToOne(
     () => ThesisKeywordsEntity,
     (thesis_keyword) => thesis_keyword.keyword,
+    { onDelete: 'CASCADE' },
   )
   thesisKeyword!: IThesisKeyword;
 }
