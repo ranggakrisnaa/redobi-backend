@@ -47,7 +47,7 @@ export class StudentService {
       nim: req.nim,
     });
     if (foundStudent) {
-      throw new ForbiddenException('Student data already exist.');
+      throw new ForbiddenException('Student already exist');
     }
 
     if (file) {
@@ -81,7 +81,7 @@ export class StudentService {
     });
 
     if (!foundStudent) {
-      throw new Error('Student data not found.');
+      throw new Error('Student not found');
     }
 
     if (foundStudent.imageUrl) {
@@ -112,7 +112,7 @@ export class StudentService {
       id: studentId as Uuid,
     });
     if (!foundStudent) {
-      throw new NotFoundException('Student data not found.');
+      throw new NotFoundException('Student not found');
     }
 
     return foundStudent;
@@ -129,7 +129,7 @@ export class StudentService {
         });
 
         if (!foundStudents.length) {
-          throw new NotFoundException('Student data not found.');
+          throw new NotFoundException('Student not found');
         }
 
         await this.studentRepository.bulkDelete(req.studentIds);
@@ -142,7 +142,7 @@ export class StudentService {
           /^[0-9a-f]{8}-[0-9a-f]{4}-[4][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
         if (!uuidRegex.test(studentId)) {
-          throw new BadRequestException('Invalid UUID format.');
+          throw new BadRequestException('Invalid UUID format');
         }
 
         const foundStudent = await this.studentRepository.findOneBy({
@@ -150,16 +150,19 @@ export class StudentService {
         });
 
         if (!foundStudent) {
-          throw new NotFoundException('Student data not found.');
+          throw new NotFoundException('Student not found');
         }
 
         await this.studentRepository.delete(foundStudent.id);
         return CreateStudentDto.toResponse(foundStudent);
       }
     } catch (err: unknown) {
-      throw new InternalServerErrorException(
-        err instanceof Error ? err.message : 'Unexpected error',
-      );
+      if (err instanceof InternalServerErrorException)
+        throw new InternalServerErrorException(
+          err instanceof Error ? err.message : 'Unexpected error',
+        );
+
+      throw err;
     }
   }
 
@@ -177,9 +180,12 @@ export class StudentService {
     try {
       return await this.exceljsService.generateExcel(columns, []);
     } catch (err: unknown) {
-      throw new InternalServerErrorException(
-        err instanceof Error ? err.message : 'Unexpected error',
-      );
+      if (err instanceof InternalServerErrorException)
+        throw new InternalServerErrorException(
+          err instanceof Error ? err.message : 'Unexpected error',
+        );
+
+      throw err;
     }
   }
 
@@ -192,7 +198,7 @@ export class StudentService {
       await workbook.xlsx.load(file.buffer);
 
       const worksheet = workbook.worksheets[0];
-      if (!worksheet) throw new BadRequestException('Invalid Excel file.');
+      if (!worksheet) throw new BadRequestException('Invalid Excel file');
 
       const headers = worksheet.getRow(1).values as string[];
       if (!headers || headers.length < 7) {
@@ -263,14 +269,17 @@ export class StudentService {
       }
 
       if (!hasValidRow) {
-        throw new BadRequestException('Missing data in Excel.');
+        throw new BadRequestException('Missing data in Excel');
       }
 
       return await this.studentRepository.bulkCreate(students);
     } catch (err: unknown) {
-      throw new InternalServerErrorException(
-        err instanceof Error ? err.message : 'Unexpected error',
-      );
+      if (err instanceof InternalServerErrorException)
+        throw new InternalServerErrorException(
+          err instanceof Error ? err.message : 'Unexpected error',
+        );
+
+      throw err;
     }
   }
 }

@@ -49,7 +49,7 @@ export class AuthService {
       email: reqBody.email,
     });
     if (foundUser) {
-      throw new ConflictException('User is exist.');
+      throw new ConflictException('User already exist');
     }
 
     try {
@@ -62,9 +62,12 @@ export class AuthService {
 
       return RegisterDto.toPlainUser(user);
     } catch (err: unknown) {
-      throw new InternalServerErrorException(
-        err instanceof Error ? err.message : 'Unexpected error',
-      );
+      if (err instanceof InternalServerErrorException)
+        throw new InternalServerErrorException(
+          err instanceof Error ? err.message : 'Unexpected error',
+        );
+
+      throw err;
     }
   }
 
@@ -73,13 +76,13 @@ export class AuthService {
       email: reqBody.email,
     });
     if (!foundUser) {
-      throw new UnauthorizedException('User is not found.');
+      throw new UnauthorizedException('User not found');
     }
 
     const isPasswordValid =
       foundUser && (await verifyPassword(reqBody.password, foundUser.password));
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Password is not valid.');
+      throw new UnauthorizedException('Password not valid');
     }
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.startTransaction();
@@ -125,9 +128,12 @@ export class AuthService {
       return { id: foundUser.id, otpCode, email: foundUser.email };
     } catch (err: unknown) {
       await queryRunner.rollbackTransaction();
-      throw new InternalServerErrorException(
-        err instanceof Error ? err.message : 'Unexpected error',
-      );
+      if (err instanceof InternalServerErrorException)
+        throw new InternalServerErrorException(
+          err instanceof Error ? err.message : 'Unexpected error',
+        );
+
+      throw err;
     } finally {
       await queryRunner.release();
     }
@@ -157,9 +163,12 @@ export class AuthService {
 
       return token;
     } catch (err: unknown) {
-      throw new InternalServerErrorException(
-        err instanceof Error ? err.message : 'Unexpected error',
-      );
+      if (err instanceof InternalServerErrorException)
+        throw new InternalServerErrorException(
+          err instanceof Error ? err.message : 'Unexpected error',
+        );
+
+      throw err;
     }
   }
 
@@ -214,8 +223,6 @@ export class AuthService {
 
     const sessionOtp = Number(foundSession.otpCode);
     const inputOtp = Number(otpCode);
-
-    console.log('Session OTP:', sessionOtp, 'Input OTP:', inputOtp);
 
     if (sessionOtp !== inputOtp) {
       const updatedTrialCount = foundSession.otpTrial + 1;
@@ -314,7 +321,7 @@ export class AuthService {
       id: verifyToken.sessionId,
     });
     if (!foundSession) {
-      throw new UnauthorizedException('Session is not found.');
+      throw new UnauthorizedException('Session not found');
     }
 
     const token = await this.createToken({
@@ -343,11 +350,11 @@ export class AuthService {
     ]);
 
     if (!foundUser) {
-      throw new UnauthorizedException('User is not found.');
+      throw new UnauthorizedException('User not found');
     }
 
     if (!foundSession) {
-      throw new UnauthorizedException('Session is not found.');
+      throw new UnauthorizedException('Session not found');
     }
 
     // TODO: change to otp safe package
@@ -388,9 +395,12 @@ export class AuthService {
       });
       return LogoutResDto.toPlainLogout(foundSession);
     } catch (err: unknown) {
-      throw new InternalServerErrorException(
-        err instanceof Error ? err.message : 'Unexpected error',
-      );
+      if (err instanceof InternalServerErrorException)
+        throw new InternalServerErrorException(
+          err instanceof Error ? err.message : 'Unexpected error',
+        );
+
+      throw err;
     }
   }
 }

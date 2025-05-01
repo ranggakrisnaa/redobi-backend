@@ -1,7 +1,18 @@
 import { ApiAuth } from '@/decorators/http.decorators';
-import { Body, Controller, Param, Post, Put } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+  Query,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { CreateThesisKeywordDto } from './dto/create.dto';
+import { DeleteThesisKeywordDto } from './dto/delete.dto';
+import { ThesisKeywordReqQuery } from './dto/query.dto';
 import { UpdateThesisKeywordDto } from './dto/update.dto';
 import { ThesisKeywordService } from './thesis-keyword.service';
 
@@ -13,9 +24,23 @@ import { ThesisKeywordService } from './thesis-keyword.service';
 export class ThesisKeywordController {
   constructor(private readonly thesisKeywordService: ThesisKeywordService) {}
 
-  async Pagination() {}
+  @ApiAuth({
+    summary: 'Pagination Thesis Keyword',
+  })
+  @Get()
+  async Pagination(@Query() reqQuery: ThesisKeywordReqQuery) {
+    return await this.thesisKeywordService.Pagination(reqQuery);
+  }
 
-  async Detail() {}
+  @ApiAuth({
+    summary: 'Pagination Thesis Keyword',
+  })
+  @Get(':thesisKeywordId')
+  async Detail(@Param('thesisKeywordId') thesisKeywordId: string) {
+    return await this.thesisKeywordService.Detail(
+      Number.parseInt(thesisKeywordId),
+    );
+  }
 
   @ApiAuth({
     summary: 'Create Thesis Keyword',
@@ -38,5 +63,17 @@ export class ThesisKeywordController {
     return await this.thesisKeywordService.Update(+thesisKeywordId, req);
   }
 
-  async Delete() {}
+  @ApiAuth({
+    summary: 'Pagination Thesis Keyword',
+  })
+  @Delete(':thesisKeywordId')
+  async Delete(
+    @Param('thesisKeywordId') thesisKeywordId: string,
+    @Body() req: DeleteThesisKeywordDto,
+  ) {
+    return await this.thesisKeywordService.Delete(
+      Number.parseInt(thesisKeywordId),
+      req,
+    );
+  }
 }

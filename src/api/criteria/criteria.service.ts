@@ -31,7 +31,7 @@ export class CriteriaService {
       name: req.name,
     });
     if (foundCriteria) {
-      throw new ForbiddenException('Criteria data already exist.');
+      throw new ForbiddenException('Criteria already exist');
     }
     try {
       const criteria = await this.criteriaRepository.createtWithTransaction(
@@ -70,9 +70,12 @@ export class CriteriaService {
     } catch (err: unknown) {
       await queryRunner.rollbackTransaction();
 
-      throw new InternalServerErrorException(
-        err instanceof Error ? err.message : 'Unexpected error',
-      );
+      if (err instanceof InternalServerErrorException)
+        throw new InternalServerErrorException(
+          err instanceof Error ? err.message : 'Unexpected error',
+        );
+
+      throw err;
     } finally {
       await queryRunner.release();
     }
@@ -84,7 +87,7 @@ export class CriteriaService {
       relations: ['subCriteria'],
     });
     if (!foundCriteria) {
-      throw new NotFoundException('Criteria data is not exist.');
+      throw new NotFoundException('Criteria not found');
     }
 
     try {
@@ -99,11 +102,9 @@ export class CriteriaService {
         (sc) => sc.id,
       );
       const receivedSubCriteriaIds = req.subCriteria.map((sc) => sc.id);
-
       const toDelete = existingSubCriteriaIds.filter(
         (id) => !receivedSubCriteriaIds.includes(id),
       );
-
       if (toDelete.length > 0) {
         await this.subCriteriaRepository.delete(toDelete);
       }
@@ -128,9 +129,12 @@ export class CriteriaService {
         id: foundCriteria.id,
       }) as ICriteria;
     } catch (err: unknown) {
-      throw new InternalServerErrorException(
-        err instanceof Error ? err.message : 'Unexpected error',
-      );
+      if (err instanceof InternalServerErrorException)
+        throw new InternalServerErrorException(
+          err instanceof Error ? err.message : 'Unexpected error',
+        );
+
+      throw err;
     }
   }
 
@@ -140,7 +144,7 @@ export class CriteriaService {
       relations: ['subCriteria'],
     });
     if (!foundCriteria) {
-      throw new NotFoundException('Criteria data is not found.');
+      throw new NotFoundException('Criteria not found');
     }
     return CreateCriteriaDto.toResponse(foundCriteria) as ICriteria;
   }
@@ -165,7 +169,7 @@ export class CriteriaService {
         });
 
         if (!foundCriteria.length) {
-          throw new NotFoundException('Criteria data is not found.');
+          throw new NotFoundException('Criteria not found');
         }
 
         await this.criteriaRepository.delete(req.criteriaIds);
@@ -184,17 +188,20 @@ export class CriteriaService {
           relations: ['subCriteria'],
         });
         if (!foundCriteria) {
-          throw new NotFoundException('Criteria data is not found.');
+          throw new NotFoundException('Criteria not found');
         }
 
         await this.criteriaRepository.delete(criteriaId);
 
         return CreateCriteriaDto.toResponse(foundCriteria) as ICriteria;
       }
-    } catch (error: unknown) {
-      throw new InternalServerErrorException(
-        error instanceof Error ? error.message : 'Unexpected error',
-      );
+    } catch (err: unknown) {
+      if (err instanceof InternalServerErrorException)
+        throw new InternalServerErrorException(
+          err instanceof Error ? err.message : 'Unexpected error',
+        );
+
+      throw err;
     }
   }
 }
