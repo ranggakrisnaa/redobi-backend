@@ -40,7 +40,7 @@ export class AssessmentService {
       relations: ['assessmentSubCriteria', 'lecturer'],
     });
     if (!foundAssessment) {
-      throw new NotFoundException('Assessment data is not found.');
+      throw new NotFoundException('Assessment data not found');
     }
     return foundAssessment;
   }
@@ -61,16 +61,16 @@ export class AssessmentService {
         }),
       ]);
       if (foundSubCriteria.length < 1) {
-        throw new NotFoundException('Sub Criteria data is not found.');
+        throw new NotFoundException('Sub Criteria data not found');
       }
 
       if (!foundLecturer) {
-        throw new NotFoundException('Lecturer data is not found.');
+        throw new NotFoundException('Lecturer data not found');
       }
 
       if (foundSubCriteria.length !== req.scores.length) {
         throw new BadRequestException(
-          'Score length must be equal to sub criteria length.',
+          'Score length must be equal to sub criteria length',
         );
       }
 
@@ -84,7 +84,7 @@ export class AssessmentService {
       });
 
       if (existingAssessments.length > 0) {
-        throw new BadRequestException('Assessment data already exists.');
+        throw new BadRequestException('Assessment data already exist');
       }
 
       const newAssessment =
@@ -112,9 +112,12 @@ export class AssessmentService {
     } catch (err: unknown) {
       await queryRunner.rollbackTransaction();
 
-      throw new InternalServerErrorException(
-        err instanceof Error ? err.message : 'Unexpected error',
-      );
+      if (err instanceof InternalServerErrorException)
+        throw new InternalServerErrorException(
+          err instanceof Error ? err.message : 'Unexpected error',
+        );
+
+      throw err;
     } finally {
       await queryRunner.release();
     }
@@ -126,14 +129,14 @@ export class AssessmentService {
       relations: ['assessmentSubCriteria'],
     });
     if (!foundAssessment || foundAssessment.assessmentSubCriteria.length < 1) {
-      throw new NotFoundException('Assessment data is not found.');
+      throw new NotFoundException('Assessment data not found');
     }
     if (
       foundAssessment.assessmentSubCriteria.map((data) => data.subCriteria)
         .length !== req.scores.length
     ) {
       throw new BadRequestException(
-        'Score length must be equal to sub criteria length.',
+        'Score length must be equal to sub criteria length',
       );
     }
 
@@ -152,9 +155,12 @@ export class AssessmentService {
 
       return CreateAssessmentDto.toResponse(foundAssessment);
     } catch (err: unknown) {
-      throw new InternalServerErrorException(
-        err instanceof Error ? err.message : 'Unexpected error',
-      );
+      if (err instanceof InternalServerErrorException)
+        throw new InternalServerErrorException(
+          err instanceof Error ? err.message : 'Unexpected error',
+        );
+
+      throw err;
     }
   }
 
@@ -166,7 +172,7 @@ export class AssessmentService {
           relations: ['assessmentSubCriteria'],
         });
         if (foundAssessments.length < 1) {
-          throw new NotFoundException('Assessment data is not found.');
+          throw new NotFoundException('Assessment data not found');
         }
         await this.assessmentRepository.delete(req.assessmentIds);
 
@@ -179,16 +185,19 @@ export class AssessmentService {
           relations: ['assessmentSubCriteria'],
         });
         if (!foundAssessment) {
-          throw new NotFoundException('Assessment data is not found.');
+          throw new NotFoundException('Assessment data not found');
         }
         await this.assessmentRepository.delete(assessmentId);
 
         return CreateAssessmentDto.toResponse(foundAssessment);
       }
     } catch (err: unknown) {
-      throw new InternalServerErrorException(
-        err instanceof Error ? err.message : 'Unexpected error',
-      );
+      if (err instanceof InternalServerErrorException)
+        throw new InternalServerErrorException(
+          err instanceof Error ? err.message : 'Unexpected error',
+        );
+
+      throw err;
     }
   }
 }

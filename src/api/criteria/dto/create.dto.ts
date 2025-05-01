@@ -25,7 +25,7 @@ export class CreateCriteriaDto {
 
   @ValidateNested({ each: true })
   @Type(() => CreateSubCriteria)
-  @ArrayMinSize(1, { message: 'Minimal 1 sub-kriteria harus diisi.' })
+  @ArrayMinSize(1, { message: 'At least 1 sub-criteria must be filled.' })
   subCriteria: CreateSubCriteria[];
 
   static toResponse(dto: CreateCriteriaDto) {

@@ -44,7 +44,7 @@ export class CriteriaController {
   })
   @Get(':criteriaId')
   async Detail(@Param('criteriaId') criteriaId: string): Promise<ICriteria> {
-    return await this.criteriaService.Detail(+criteriaId);
+    return await this.criteriaService.Detail(Number.parseInt(criteriaId));
   }
 
   @ApiAuth({
@@ -65,7 +65,7 @@ export class CriteriaController {
     @Body() req: UpdateCriteriaDto,
     @Param('criteriaId') criteriaId: string,
   ): Promise<ICriteria> {
-    return await this.criteriaService.Update(req, +criteriaId);
+    return await this.criteriaService.Update(req, Number.parseInt(criteriaId));
   }
 
   @ApiAuth({

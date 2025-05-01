@@ -43,9 +43,12 @@ export class LecturerService {
     try {
       return await this.exceljsService.generateExcel(columns, []);
     } catch (err: unknown) {
-      throw new InternalServerErrorException(
-        err instanceof Error ? err.message : 'Unexpected error',
-      );
+      if (err instanceof InternalServerErrorException)
+        throw new InternalServerErrorException(
+          err instanceof Error ? err.message : 'Unexpected error',
+        );
+
+      throw err;
     }
   }
 
@@ -75,11 +78,11 @@ export class LecturerService {
         hasValidRow = true;
 
         if (!Object.values(TipePembimbingEnum).includes(rowData[5]?.trim())) {
-          errors.push({ row: rowNumber, message: 'Invalid tipe pembimbing.' });
+          errors.push({ row: rowNumber, message: 'Invalid tipe pembimbing' });
         }
 
         if (!Object.values(ProdiEnum).includes(rowData[3]?.trim())) {
-          errors.push({ row: rowNumber, message: 'Invalid prodi.' });
+          errors.push({ row: rowNumber, message: 'Invalid prodi' });
         }
 
         const lecturer: Partial<ILecturer> = {
@@ -117,14 +120,17 @@ export class LecturerService {
       }
 
       if (!hasValidRow) {
-        throw new BadRequestException('Missing data in Excel.');
+        throw new BadRequestException('Missing data in Excel');
       }
 
       return await this.lecturerRepository.bulkCreate(lecturers);
     } catch (err: unknown) {
-      throw new InternalServerErrorException(
-        err instanceof Error ? err.message : 'Unexpected error',
-      );
+      if (err instanceof InternalServerErrorException)
+        throw new InternalServerErrorException(
+          err instanceof Error ? err.message : 'Unexpected error',
+        );
+
+      throw err;
     }
   }
 
@@ -139,7 +145,7 @@ export class LecturerService {
     });
 
     if (foundLecturer) {
-      throw new ForbiddenException('Lecturer data already exist.');
+      throw new ForbiddenException('Lecturer already exist');
     }
 
     if (file) {
@@ -160,9 +166,12 @@ export class LecturerService {
 
       return CreateLecturerDto.toResponse(data);
     } catch (err: unknown) {
-      throw new InternalServerErrorException(
-        err instanceof Error ? err.message : 'Unexpected error',
-      );
+      if (err instanceof InternalServerErrorException)
+        throw new InternalServerErrorException(
+          err instanceof Error ? err.message : 'Unexpected error',
+        );
+
+      throw err;
     }
   }
 
@@ -177,7 +186,7 @@ export class LecturerService {
     });
 
     if (!foundLecturer) {
-      throw new NotFoundException('Lecturer data is not found.');
+      throw new NotFoundException('Lecturer not found');
     }
 
     if (foundLecturer.imageUrl) {
@@ -203,9 +212,12 @@ export class LecturerService {
       });
       return CreateLecturerDto.toResponse(data);
     } catch (err: unknown) {
-      throw new InternalServerErrorException(
-        err instanceof Error ? err.message : 'Unexpected error',
-      );
+      if (err instanceof InternalServerErrorException)
+        throw new InternalServerErrorException(
+          err instanceof Error ? err.message : 'Unexpected error',
+        );
+
+      throw err;
     }
   }
 
@@ -221,7 +233,7 @@ export class LecturerService {
     });
 
     if (!foundLecturer) {
-      throw new NotFoundException('Lecturer data is not found.');
+      throw new NotFoundException('Lecturer data found.');
     }
 
     return foundLecturer;
@@ -238,7 +250,7 @@ export class LecturerService {
         });
 
         if (!foundLecturers.length) {
-          throw new NotFoundException('Lecturer data not found.');
+          throw new NotFoundException('Lecturer data found.');
         }
 
         await this.lecturerRepository.bulkDelete(req.lecturerIds);
@@ -251,22 +263,25 @@ export class LecturerService {
           /^[0-9a-f]{8}-[0-9a-f]{4}-[4][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
         if (!uuidRegex.test(lecturerId)) {
-          throw new BadRequestException('Invalid UUID format.');
+          throw new BadRequestException('Invalid UUID format');
         }
         const foundLecturer = await this.lecturerRepository.findOneBy({
           id: lecturerId as Uuid,
         });
 
         if (!foundLecturer) {
-          throw new NotFoundException('Lecturer data is not found.');
+          throw new NotFoundException('Lecturer not found');
         }
         await this.lecturerRepository.delete(foundLecturer.id);
         return CreateLecturerDto.toResponse(foundLecturer);
       }
-    } catch (error: unknown) {
-      throw new InternalServerErrorException(
-        error instanceof Error ? error.message : 'Unexpected error',
-      );
+    } catch (err: unknown) {
+      if (err instanceof InternalServerErrorException)
+        throw new InternalServerErrorException(
+          err instanceof Error ? err.message : 'Unexpected error',
+        );
+
+      throw err;
     }
   }
 }
