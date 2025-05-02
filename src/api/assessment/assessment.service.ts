@@ -50,43 +50,43 @@ export class AssessmentService {
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
-    try {
-      const [foundSubCriteria, foundLecturer] = await Promise.all([
-        this.subCriteriaRepository.find({
-          where: { id: In(req.subCriteriaIds) },
-          select: ['id'],
-        }),
-        this.lecturerRepository.findOne({
-          where: { id: req.lecturerId as Uuid },
-        }),
-      ]);
-      if (foundSubCriteria.length < 1) {
-        throw new NotFoundException('Sub Criteria data not found');
-      }
+    const [foundSubCriteria, foundLecturer] = await Promise.all([
+      this.subCriteriaRepository.find({
+        where: { id: In(req.subCriteriaIds) },
+        select: ['id'],
+      }),
+      this.lecturerRepository.findOne({
+        where: { id: req.lecturerId as Uuid },
+      }),
+    ]);
+    if (foundSubCriteria.length < 1) {
+      throw new NotFoundException('Sub Criteria data not found');
+    }
 
-      if (!foundLecturer) {
-        throw new NotFoundException('Lecturer data not found');
-      }
+    if (!foundLecturer) {
+      throw new NotFoundException('Lecturer data not found');
+    }
 
-      if (foundSubCriteria.length !== req.scores.length) {
-        throw new BadRequestException(
-          'Score length must be equal to sub criteria length',
-        );
-      }
+    if (foundSubCriteria.length !== req.scores.length) {
+      throw new BadRequestException(
+        'Score length must be equal to sub criteria length',
+      );
+    }
 
-      const existingAssessments = await this.assessmentRepository.find({
-        where: {
-          lecturerId: foundLecturer.id,
-          assessmentSubCriteria: {
-            subCriteriaId: In(req.subCriteriaIds as unknown as number[]),
-          },
+    const existingAssessments = await this.assessmentRepository.find({
+      where: {
+        lecturerId: foundLecturer.id,
+        assessmentSubCriteria: {
+          subCriteriaId: In(req.subCriteriaIds as unknown as number[]),
         },
-      });
+      },
+    });
 
-      if (existingAssessments.length > 0) {
-        throw new BadRequestException('Assessment data already exist');
-      }
+    if (existingAssessments.length > 0) {
+      throw new BadRequestException('Assessment data already exist');
+    }
 
+    try {
       const newAssessment =
         await this.assessmentRepository.createWithTransaction(
           queryRunner,
