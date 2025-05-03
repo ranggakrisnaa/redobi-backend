@@ -7,6 +7,7 @@ import { HealthModule } from './health/health.module';
 import { HomeModule } from './home/home.module';
 import { KeywordModule } from './keyword/keyword.module';
 import { LecturerModule } from './lecturer/lecturer.module';
+import { NormalizedMatrixModule } from './normalized-matrix/normalized-matrix.module';
 import { ReccomendationModule } from './reccomendation/reccomendation.module';
 import { SessionModule } from './session/session.module';
 import { StudentModule } from './student/student.module';
@@ -30,6 +31,7 @@ import { UserModule } from './user/user.module';
     ThesisKeywordModule,
     KeywordModule,
     ReccomendationModule,
+    NormalizedMatrixModule,
   ],
 })
 export class ApiModule {}

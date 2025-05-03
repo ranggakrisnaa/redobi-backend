@@ -1,7 +1,8 @@
 import { CriteriaTypeEnum } from '@/database/enums/criteria-type.enum';
+import { INormalizedMatrices } from '@/database/interface-model/normalized-matrices-entity.interface';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { AssessmentRepository } from '../assessment/assessment.repository';
-import { CriteriaRepository } from '../criteria/criteria.repository';
+import { NormalizedMatrixRepository } from '../normalized-matrix/normalized-matrix.repository';
 import { CreateReccomendationDto } from './dto/create.dto';
 import { ReccomendationRepository } from './reccomendation.repository';
 
@@ -10,7 +11,7 @@ export class ReccomendationService {
   constructor(
     private readonly reccomendationRepository: ReccomendationRepository,
     private readonly assessmentRepository: AssessmentRepository,
-    private readonly criteriaRepository: CriteriaRepository,
+    private readonly normalizedMatrixRepository: NormalizedMatrixRepository,
   ) {}
 
   async Pagination() {}
@@ -33,14 +34,23 @@ export class ReccomendationService {
         },
       });
 
-      // 1. Kumpulkan skor per subCriteriaId beserta tipe kriterianya
       const subCriteriaScoresMap = new Map<
         number,
         { scores: number[]; type: CriteriaTypeEnum }
       >();
 
+      let foundNormalize: INormalizedMatrices[] = [];
       for (const assessment of allAssessments) {
         for (const sub of assessment.assessmentSubCriteria) {
+          const normalized = await this.normalizedMatrixRepository.find({
+            where: {
+              criteriaId: sub.subCriteria.criteriaId,
+              lecturerId: assessment.lecturerId,
+            },
+          });
+
+          foundNormalize.push(...normalized);
+
           const subId = sub.subCriteriaId;
           const criteriaType = sub.subCriteria.criteria.type;
 
@@ -52,9 +62,13 @@ export class ReccomendationService {
         }
       }
 
-      // 2. Hitung nilai max/min berdasarkan tipe (BENEFIT/COST)
-      const subCriteriaScoreMap = new Map<number, number>();
+      const normalizedMatrixMap = new Map<string, INormalizedMatrices>();
+      for (const matrix of foundNormalize) {
+        const key = `${matrix.lecturerId}-${matrix.criteriaId}`;
+        normalizedMatrixMap.set(key, matrix);
+      }
 
+      const subCriteriaScoreMap = new Map<number, number>();
       for (const [subId, data] of subCriteriaScoresMap.entries()) {
         const { scores, type } = data;
         const value =
@@ -65,9 +79,8 @@ export class ReccomendationService {
         subCriteriaScoreMap.set(subId, value);
       }
 
-      // 3. Normalisasi
-      const result = allAssessments.map((assessment) => {
-        const normalized = assessment.assessmentSubCriteria.map((sub) => {
+      const entities = allAssessments.flatMap((assessment) => {
+        return assessment.assessmentSubCriteria.map((sub) => {
           const criteria = sub.subCriteria.criteria;
           const refValue = subCriteriaScoreMap.get(sub.subCriteriaId) ?? 1;
 
@@ -78,18 +91,51 @@ export class ReccomendationService {
             normalizedScore = sub.score > 0 ? refValue / sub.score : 0;
           }
 
-          return parseFloat(normalizedScore.toFixed(4));
+          return {
+            criteriaId: criteria.id,
+            lecturerId: assessment.lecturerId,
+            normalizedValue: normalizedScore,
+          };
         });
-
-        return {
-          assessmentId: assessment.id,
-          lecturerId: assessment.lecturerId,
-          normalized,
-        };
       });
 
-      console.log(JSON.stringify(result, null, 2));
-      return result;
+      const groupedMap = new Map<
+        string,
+        { lecturerId: string; criteriaId: number; totalNormalizedValue: number }
+      >();
+
+      for (const entry of entities) {
+        const key = `${entry.lecturerId}-${entry.criteriaId}`;
+        if (!groupedMap.has(key)) {
+          groupedMap.set(key, {
+            lecturerId: entry.lecturerId,
+            criteriaId: entry.criteriaId,
+            totalNormalizedValue: 0,
+          });
+        }
+
+        groupedMap.get(key)!.totalNormalizedValue += entry.normalizedValue;
+      }
+
+      const result = Array.from(groupedMap.values()).map((item) => ({
+        lecturerId: item.lecturerId,
+        criteriaId: item.criteriaId,
+        normalizedValue: item.totalNormalizedValue,
+      }));
+
+      for (const data of result) {
+        const existingRecord = normalizedMatrixMap.get(
+          `${data.lecturerId}-${data.criteriaId}`,
+        );
+
+        if (existingRecord) {
+          await this.normalizedMatrixRepository.update(existingRecord.id, {
+            normalizedValue: data.normalizedValue,
+          });
+        } else {
+          await this.normalizedMatrixRepository.save(data);
+        }
+      }
     } catch (err: unknown) {
       if (err instanceof InternalServerErrorException) {
         throw new InternalServerErrorException(
@@ -100,6 +146,8 @@ export class ReccomendationService {
       throw err;
     }
   }
+
+  async;
 
   async Create(_req: CreateReccomendationDto) {
     try {
