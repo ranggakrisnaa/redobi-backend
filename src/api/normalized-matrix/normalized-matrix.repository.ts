@@ -9,4 +9,14 @@ export class NormalizedMatrixRepository extends Repository<NormalizedMatricesEnt
   ) {
     super(repo.target, repo.manager, repo.queryRunner);
   }
+
+  async findAllNormalizedMatrixWithSumTotalValue() {
+    const targetName = this.repo.metadata.targetName;
+    const query = this.createQueryBuilder(targetName)
+      .select(`${targetName}.lecturerId`, 'lecturerId')
+      .addSelect(`SUM(${targetName}.normalizedValue)`, 'finalScore')
+      .groupBy(`${targetName}.lecturerId`);
+
+    return await query.getRawMany();
+  }
 }

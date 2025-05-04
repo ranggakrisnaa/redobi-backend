@@ -3,6 +3,8 @@ import { INormalizedMatrices } from '@/database/interface-model/normalized-matri
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { AssessmentRepository } from '../assessment/assessment.repository';
 import { NormalizedMatrixRepository } from '../normalized-matrix/normalized-matrix.repository';
+import { RankingMatricesRepository } from '../ranking-matrices/ranking-matrices.repository';
+import { RankingNormalizedMatricesRepository } from '../ranking-normalized-matrices/ranking-normalized-matrices.repository';
 import { CreateReccomendationDto } from './dto/create.dto';
 import { ReccomendationRepository } from './reccomendation.repository';
 
@@ -12,13 +14,15 @@ export class ReccomendationService {
     private readonly reccomendationRepository: ReccomendationRepository,
     private readonly assessmentRepository: AssessmentRepository,
     private readonly normalizedMatrixRepository: NormalizedMatrixRepository,
+    private readonly rankingNormalizedMatricesRepository: RankingNormalizedMatricesRepository,
+    private readonly rankingMatricesRepository: RankingMatricesRepository,
   ) {}
 
   async Pagination() {}
 
   async Detail() {}
 
-  async CreateNormalizeMatrix() {
+  async CreateNormalizationMatrix() {
     try {
       const allAssessments = await this.assessmentRepository.find({
         relations: [
@@ -42,12 +46,7 @@ export class ReccomendationService {
       let foundNormalize: INormalizedMatrices[] = [];
       for (const assessment of allAssessments) {
         for (const sub of assessment.assessmentSubCriteria) {
-          const normalized = await this.normalizedMatrixRepository.find({
-            where: {
-              criteriaId: sub.subCriteria.criteriaId,
-              lecturerId: assessment.lecturerId,
-            },
-          });
+          const normalized = await this.normalizedMatrixRepository.find();
 
           foundNormalize.push(...normalized);
 
@@ -147,12 +146,61 @@ export class ReccomendationService {
     }
   }
 
-  async;
+  async NormalizationMatricesRanking() {
+    try {
+      const [foundMatrices, foundTotalValue] = await Promise.all([
+        this.normalizedMatrixRepository.find(),
+        this.normalizedMatrixRepository.findAllNormalizedMatrixWithSumTotalValue(),
+      ]);
+
+      const sortedRanking = [...foundTotalValue].sort(
+        (a, b) => Number(b.finalScore) - Number(a.finalScore),
+      );
+
+      const foundRanking = await this.rankingMatricesRepository.find();
+
+      const savedRankingMap = new Map<string, { id: string }>();
+      for (let i = 0; i < sortedRanking.length; i++) {
+        const item = sortedRanking[i];
+        const alreadyExists = foundRanking.some(
+          (existing) =>
+            existing.lecturerId === item.lecturerId ||
+            existing.finalScore === item.finalScore,
+        );
+        if (alreadyExists) continue;
+
+        const ranking = await this.rankingMatricesRepository.save({
+          lecturerId: item.lecturerId,
+          finalScore: item.finalScore,
+          rank: i + 1,
+        });
+
+        savedRankingMap.set(item.lecturerId, ranking);
+      }
+
+      for (const normalized of foundMatrices) {
+        const rankingMatrix = savedRankingMap.get(normalized.lecturerId);
+        if (!rankingMatrix) continue;
+
+        await this.rankingNormalizedMatricesRepository.save({
+          normalizedMatricesId: normalized.id,
+          rankingMatricesId: rankingMatrix.id,
+        });
+      }
+    } catch (err: unknown) {
+      if (err instanceof InternalServerErrorException)
+        throw new InternalServerErrorException(
+          err instanceof Error ? err.message : 'Unexpected error',
+        );
+
+      throw err;
+    }
+  }
 
   async Create(_req: CreateReccomendationDto) {
     try {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const data = await this.reccomendationRepository.find({ where: {} });
+      const data = await this.reccomendationRepository.find();
     } catch (err: unknown) {
       if (err instanceof InternalServerErrorException)
         throw new InternalServerErrorException(

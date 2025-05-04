@@ -33,7 +33,15 @@ export class ReccomendationController {
   })
   @Post('/normalized')
   async CreateNormalizeMatrix() {
-    await this.reccomendationService.CreateNormalizeMatrix();
+    await this.reccomendationService.CreateNormalizationMatrix();
+  }
+
+  @ApiAuth({
+    summary: 'Get detail criteria',
+  })
+  @Post('/rank')
+  async NormalizationMatricesRanking() {
+    await this.reccomendationService.NormalizationMatricesRanking();
   }
 
   async Update() {

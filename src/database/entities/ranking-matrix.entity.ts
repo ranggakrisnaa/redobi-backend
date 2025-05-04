@@ -33,7 +33,7 @@ export class RankingMatricesEntity
     precision: 5,
     scale: 2,
     transformer: {
-      to: (value: number) => value.toFixed(2),
+      to: (value: number) => value,
       from: (value: string) => parseFloat(value),
     },
   })
