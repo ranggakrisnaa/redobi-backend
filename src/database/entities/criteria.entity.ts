@@ -1,7 +1,9 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { CriteriaTypeEnum } from '../enums/criteria-type.enum';
 import { ICriteria } from '../interface-model/criteria-entity.interface';
+import { INormalizedMatrices } from '../interface-model/normalized-matrices-entity.interface';
 import { AbstractEntity } from './abstract.entity';
+import { NormalizedMatricesEntity } from './normalized-matrices.entity';
 import { SubCriteriaEntity } from './sub-criteria.entity';
 
 @Entity('criteria')
@@ -30,4 +32,10 @@ export class CriteriaEntity extends AbstractEntity implements ICriteria {
 
   @OneToMany(() => SubCriteriaEntity, (sub) => sub.criteria)
   subCriteria: SubCriteriaEntity[];
+
+  @OneToMany(
+    () => NormalizedMatricesEntity,
+    (normalized) => normalized.criteria,
+  )
+  normalizedMatrices?: INormalizedMatrices[];
 }
