@@ -1,7 +1,6 @@
 import { ApiAuth } from '@/decorators/http.decorators';
-import { Body, Controller, Post } from '@nestjs/common';
+import { Controller, Post } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { CreateReccomendationDto } from './dto/create.dto';
 import { ReccomendationService } from './reccomendation.service';
 
 @ApiTags('reccomendations')
@@ -24,8 +23,9 @@ export class ReccomendationController {
     summary: 'Get detail criteria',
   })
   @Post()
-  async Create(@Body() req: CreateReccomendationDto) {
-    await this.reccomendationService.Create(req);
+  async Create() {
+    // @Body() req: CreateReccomendationDto
+    await this.reccomendationService.Create();
   }
 
   @ApiAuth({

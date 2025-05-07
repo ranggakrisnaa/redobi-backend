@@ -1,11 +1,16 @@
+import { Uuid } from '@/common/types/common.type';
 import { CriteriaTypeEnum } from '@/database/enums/criteria-type.enum';
+import { ThesisKeywordCategoryEnum } from '@/database/enums/thesis-keyword-category.enum';
+import { TipePembimbingEnum } from '@/database/enums/tipe-pembimbing.enum';
 import { INormalizedMatrices } from '@/database/interface-model/normalized-matrices-entity.interface';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { AssessmentRepository } from '../assessment/assessment.repository';
+import { LecturerRepository } from '../lecturer/lecturer.repository';
 import { NormalizedMatrixRepository } from '../normalized-matrix/normalized-matrix.repository';
 import { RankingMatricesRepository } from '../ranking-matrices/ranking-matrices.repository';
 import { RankingNormalizedMatricesRepository } from '../ranking-normalized-matrices/ranking-normalized-matrices.repository';
-import { CreateReccomendationDto } from './dto/create.dto';
+import { StudentRepository } from '../student/student.repository';
+import { ThesisKeywordRepository } from '../thesis-keyword/thesis-keyword.repository';
 import { ReccomendationRepository } from './reccomendation.repository';
 
 @Injectable()
@@ -16,6 +21,9 @@ export class ReccomendationService {
     private readonly normalizedMatrixRepository: NormalizedMatrixRepository,
     private readonly rankingNormalizedMatricesRepository: RankingNormalizedMatricesRepository,
     private readonly rankingMatricesRepository: RankingMatricesRepository,
+    private readonly thesisKeywordRepository: ThesisKeywordRepository,
+    private readonly studentRepository: StudentRepository,
+    private readonly lecturerRepository: LecturerRepository,
   ) {}
 
   async Pagination() {}
@@ -135,6 +143,9 @@ export class ReccomendationService {
           await this.normalizedMatrixRepository.save(data);
         }
       }
+      return {
+        message: 'Matrix normalization created successfully.',
+      };
     } catch (err: unknown) {
       if (err instanceof InternalServerErrorException) {
         throw new InternalServerErrorException(
@@ -148,21 +159,21 @@ export class ReccomendationService {
 
   async NormalizationMatricesRanking() {
     try {
-      const [foundMatrices, foundTotalValue] = await Promise.all([
+      const [foundMatrices, foundTotalValues] = await Promise.all([
         this.normalizedMatrixRepository.find(),
         this.normalizedMatrixRepository.findAllNormalizedMatrixWithSumTotalValue(),
       ]);
 
-      const sortedRanking = [...foundTotalValue].sort(
+      const sortedRanking = [...foundTotalValues].sort(
         (a, b) => Number(b.finalScore) - Number(a.finalScore),
       );
 
-      const foundRanking = await this.rankingMatricesRepository.find();
+      const foundAllRankings = await this.rankingMatricesRepository.find();
 
       const savedRankingMap = new Map<string, { id: string }>();
       for (let i = 0; i < sortedRanking.length; i++) {
         const item = sortedRanking[i];
-        const alreadyExists = foundRanking.some(
+        const alreadyExists = foundAllRankings.some(
           (existing) =>
             existing.lecturerId === item.lecturerId ||
             existing.finalScore === item.finalScore,
@@ -195,13 +206,127 @@ export class ReccomendationService {
 
       throw err;
     }
+
+    return {
+      message: 'Matrix normalization created successfully.',
+    };
   }
 
-  async Create(_req: CreateReccomendationDto) {
+  async Create() {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const data = await this.reccomendationRepository.find();
+      const [foundAllRankings, foundAllStudents] = await Promise.all([
+        this.rankingMatricesRepository.find({
+          relations: ['lecturer'],
+        }),
+        this.studentRepository.find(),
+      ]);
+
+      const studentMapWithThesisValue = new Map<
+        string,
+        { studentId: string; major: string; value: number }
+      >();
+      for (const student of foundAllStudents) {
+        const foundThesisKeyword = await this.thesisKeywordRepository.findOne({
+          where: {
+            category: student.major as unknown as ThesisKeywordCategoryEnum,
+          },
+          relations: ['keyword'],
+        });
+        const keywordArray = student.judulSkripsi.toLowerCase().split(' ');
+
+        const filteredStudentThesisKeyword = keywordArray.filter(
+          (key) =>
+            foundThesisKeyword &&
+            foundThesisKeyword.keyword.some(
+              (name) => name.name.toLowerCase() === key.toLowerCase(),
+            ),
+        );
+        const value = filteredStudentThesisKeyword.length * 10;
+
+        studentMapWithThesisValue.set(student.id, {
+          studentId: student.id,
+          major: student.major,
+          value,
+        });
+      }
+
+      const ranking = Array.from(studentMapWithThesisValue.entries())
+        .sort((a, b) => b[1].value - a[1].value)
+        .map(([studentId, value], index) => ({
+          studentId,
+          major: value.major,
+          value: value.value,
+          rank: index + 1,
+        }));
+
+      const filteredRanking = ranking.filter(
+        (value) =>
+          value.major == ThesisKeywordCategoryEnum.REKAYASA_PERANGKAT_LUNAK,
+      );
+
+      const numberOfLecturers = foundAllRankings.length;
+      const studentsPerLecturer = Math.ceil(
+        filteredRanking.length / numberOfLecturers,
+      );
+
+      const pembimbingTypes = [
+        TipePembimbingEnum.PEMBIMBING_SATU,
+        TipePembimbingEnum.PEMBIMBING_DUA,
+      ];
+
+      for (const student of filteredRanking) {
+        for (const tipePembimbing of pembimbingTypes) {
+          let isAssigned = false;
+
+          for (const lecturer of foundAllRankings.filter(
+            (data) => data.lecturer.tipePembimbing === tipePembimbing,
+          )) {
+            if (isAssigned) break;
+
+            const currentLecturerStudentsCount =
+              await this.reccomendationRepository.count({
+                where: { lecturerId: lecturer.lecturer.id },
+              });
+
+            if (currentLecturerStudentsCount < studentsPerLecturer) {
+              const existingRecommendation =
+                await this.reccomendationRepository.findOne({
+                  where: {
+                    studentId: student.studentId as Uuid,
+                    lecturerId: lecturer.lecturer.id,
+                  },
+                });
+
+              if (!existingRecommendation) {
+                await this.reccomendationRepository.save({
+                  studentId: student.studentId,
+                  lecturerId: lecturer.lecturer.id,
+                  reccomendationScore: lecturer.finalScore,
+                });
+
+                isAssigned = true;
+              }
+            }
+          }
+        }
+      }
+
+      const lecturerIds = foundAllRankings.map(
+        (ranking) => ranking.lecturer.id,
+      );
+
+      for (const lecturerId of lecturerIds) {
+        const actualStudentCount = await this.reccomendationRepository.count({
+          where: { lecturerId: lecturerId },
+        });
+
+        await this.lecturerRepository.update(lecturerId, {
+          jumlahBimbingan: actualStudentCount,
+        });
+      }
     } catch (err: unknown) {
+      console.log(err);
+
       if (err instanceof InternalServerErrorException)
         throw new InternalServerErrorException(
           err instanceof Error ? err.message : 'Unexpected error',
