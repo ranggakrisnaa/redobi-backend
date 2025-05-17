@@ -20,26 +20,42 @@ export class CriteriaRepository extends Repository<CriteriaEntity> {
     reqQuery: CriteriaPaginationReqQuery,
   ): Promise<OffsetPaginatedDto<ICriteria>> {
     const targetName = this.repo.metadata.targetName;
-    const query = this.createQueryBuilder(targetName).leftJoinAndSelect(
-      `${targetName}.subCriteria`,
-      'subCriteria',
+
+    const idQuery = this.createQueryBuilder(targetName).select(
+      `${targetName}.id`,
     );
 
-    this.applyFilters(query, reqQuery, targetName);
+    this.applyFilters(idQuery, reqQuery, targetName);
 
     const sortField = [
       { name: 'name', alias: `${targetName}.name` },
       { name: 'created_at', alias: `${targetName}.createdAt` },
     ].find((sort) => sort.name === reqQuery.sort);
     if (sortField) {
-      query.orderBy(sortField.alias, reqQuery.order as OrderDirectionEnum);
+      idQuery.orderBy(sortField.alias, reqQuery.order as OrderDirectionEnum);
     } else {
-      query.orderBy(`${targetName}.createdAt`, OrderDirectionEnum.Asc);
+      idQuery.orderBy(`${targetName}.createdAt`, OrderDirectionEnum.Asc);
     }
 
-    query.limit(reqQuery.limit).offset(reqQuery.offset);
+    idQuery.limit(reqQuery.limit).offset(reqQuery.offset);
 
-    const [data, total] = await query.getManyAndCount();
+    const ids = await idQuery.getRawMany();
+    const criteriaIds = ids.map((row) => row[`${targetName}_id`]);
+
+    const criteriaQuery = this.createQueryBuilder(targetName)
+      .leftJoinAndSelect(`${targetName}.subCriteria`, 'subCriteria')
+      .whereInIds(criteriaIds);
+
+    if (sortField) {
+      criteriaQuery.orderBy(
+        sortField.alias,
+        reqQuery.order as OrderDirectionEnum,
+      );
+    } else {
+      criteriaQuery.orderBy(`${targetName}.createdAt`, OrderDirectionEnum.Asc);
+    }
+
+    const [data, total] = await criteriaQuery.getManyAndCount();
 
     const pagination = plainToInstance(
       OffsetPaginationDto,
