@@ -52,7 +52,7 @@ export class StudentController {
     summary: 'Generate Template Excel',
   })
   @Get('templates')
-  async GenerateTemplateExcel(@Res() res: Response) {
+  async GenerateTemplateExcel(@Res() res: Response): Promise<void> {
     const bufferFile = await this.studentService.GenerateTemplateExcel();
 
     res.set({
@@ -70,7 +70,7 @@ export class StudentController {
   @Get(':studentId')
   async Detail(
     @Param('studentId', ParseUUIDPipe) studentId: string,
-  ): Promise<IStudent> {
+  ): Promise<Record<string, IStudent>> {
     return await this.studentService.Detail(studentId);
   }
 
@@ -86,7 +86,7 @@ export class StudentController {
     @Body() req: CreateStudentDto,
     @CurrentUser() userToken: JwtPayloadType,
     @UploadedFile() file: Express.Multer.File,
-  ): Promise<Partial<IStudent>> {
+  ): Promise<Record<string, IStudent>> {
     return await this.studentService.Create(req, userToken.id, file);
   }
 
@@ -102,7 +102,7 @@ export class StudentController {
     @Body() req: UpdateStudentDto,
     @Param('studentId', ParseUUIDPipe) studentId: string,
     @UploadedFile() file: Express.Multer.File,
-  ): Promise<Partial<IStudent>> {
+  ): Promise<Record<string, IStudent>> {
     return await this.studentService.Update(req, studentId, file);
   }
 
@@ -114,7 +114,7 @@ export class StudentController {
   async Delete(
     @Param('studentId') studentId: string,
     @Body() req: DeleteStudentDto,
-  ): Promise<Partial<IStudent> | Partial<IStudent>[]> {
+  ): Promise<Record<string, IStudent | IStudent[]>> {
     return await this.studentService.Delete(studentId, req);
   }
 
@@ -128,7 +128,7 @@ export class StudentController {
   async HandleExcelTemplate(
     @UploadedFile() file: Express.Multer.File,
     @CurrentUser() userToken: JwtPayloadType,
-  ): Promise<IStudent[]> {
+  ): Promise<Record<string, IStudent[]>> {
     return await this.studentService.HandleExcelTemplate(file, userToken.id);
   }
 }

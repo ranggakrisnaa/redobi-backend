@@ -1,7 +1,6 @@
 import { Uuid } from '@/common/types/common.type';
 import { ClassEnum } from '@/database/enums/class.enum';
 import { MajorEnum } from '@/database/enums/major.enum';
-import { IStudent } from '@/database/interface-model/student-entity.interface';
 import {
   EnumField,
   NumberField,
@@ -39,7 +38,7 @@ export class CreateStudentDto {
   @StringFieldOptional()
   imageUrl: string;
 
-  static toResponse(dto: CreateStudentDto): Partial<IStudent> {
+  static toResponse(dto: Partial<CreateStudentDto>) {
     return {
       id: dto.id,
       createdAt: dto.createdAt,

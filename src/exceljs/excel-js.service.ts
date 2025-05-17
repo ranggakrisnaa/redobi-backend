@@ -7,7 +7,7 @@ export class ExcelJsService {
   async generateExcel(
     columns: ColumnConfig[],
     data: any[],
-  ): Promise<Buffer | ArrayBuffer> {
+  ): Promise<ExcelJS.Buffer> {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Sheet 1');
 
@@ -60,6 +60,6 @@ export class ExcelJsService {
       }
     });
 
-    return (await workbook.xlsx.writeBuffer()) as Buffer;
+    return await workbook.xlsx.writeBuffer();
   }
 }

@@ -1,6 +1,8 @@
+import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
 import { KeywordsEntity } from '@/database/entities/keyword.entity';
 import { ThesisKeywordCategoryEnum } from '@/database/enums/thesis-keyword-category.enum';
 import { IKeyword } from '@/database/interface-model/keyword-entity.interface';
+import { IThesisKeyword } from '@/database/interface-model/thesis-keyword-entity.interface';
 import {
   BadRequestException,
   Injectable,
@@ -23,11 +25,15 @@ export class ThesisKeywordService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async Pagination(reqQuery: ThesisKeywordReqQuery) {
+  async Pagination(
+    reqQuery: ThesisKeywordReqQuery,
+  ): Promise<OffsetPaginatedDto<IThesisKeyword>> {
     return this.thesisKeywordRepository.Pagination(reqQuery);
   }
 
-  async Detail(thesisKeywordId: number) {
+  async Detail(
+    thesisKeywordId: number,
+  ): Promise<Record<string, IThesisKeyword>> {
     const foundThesisKeyword = await this.thesisKeywordRepository.findOne({
       where: {
         id: thesisKeywordId,
@@ -38,10 +44,12 @@ export class ThesisKeywordService {
       throw new BadRequestException('Thesis keyword is not found');
     }
 
-    return foundThesisKeyword;
+    return { data: foundThesisKeyword };
   }
 
-  async Create(req: CreateThesisKeywordDto) {
+  async Create(
+    req: CreateThesisKeywordDto,
+  ): Promise<Record<string, IThesisKeyword>> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -53,6 +61,7 @@ export class ThesisKeywordService {
             name: In(req.names),
           },
         },
+        relations: ['keyword'],
       });
       if (foundThesisKeyword) {
         throw new BadRequestException('Thesis keyword already exists');
@@ -74,10 +83,11 @@ export class ThesisKeywordService {
 
       await queryRunner.commitTransaction();
 
-      return CreateThesisKeywordDto.toResponse({
-        ...newThesisKeyword,
-        names: req.names,
-      } as unknown as CreateThesisKeywordDto);
+      return {
+        data: CreateThesisKeywordDto.toResponse(
+          foundThesisKeyword,
+        ) as unknown as IThesisKeyword,
+      };
     } catch (err: unknown) {
       await queryRunner.rollbackTransaction();
 
@@ -89,24 +99,26 @@ export class ThesisKeywordService {
     }
   }
 
-  async Update(thesisKeywordId: number, req: UpdateThesisKeywordDto) {
+  async Update(
+    thesisKeywordId: number,
+    req: UpdateThesisKeywordDto,
+  ): Promise<Record<any, IThesisKeyword>> {
+    const foundThesisKeyword = await this.thesisKeywordRepository.findOne({
+      where: { id: thesisKeywordId },
+      relations: ['keyword'],
+    });
+    if (!foundThesisKeyword) {
+      throw new NotFoundException('Thesis keyword not found');
+    }
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
     try {
-      const foundThesisKeyword = await this.thesisKeywordRepository.findOne({
-        where: { id: thesisKeywordId },
-        relations: ['keyword'],
+      await this.thesisKeywordRepository.updateWithTransaction(queryRunner, {
+        ...foundThesisKeyword,
+        ...req,
       });
-      if (!foundThesisKeyword) {
-        throw new NotFoundException('Thesis keyword not found');
-      }
-
-      const updateThesisKeyword =
-        await this.thesisKeywordRepository.updateWithTransaction(queryRunner, {
-          ...foundThesisKeyword,
-          ...req,
-        });
 
       const existKeywordId = foundThesisKeyword.keyword.map((k) => k.id);
       const receiveKeywordId = req.keywords.map((k) => k.id);
@@ -139,10 +151,11 @@ export class ThesisKeywordService {
       }
       await queryRunner.commitTransaction();
 
-      return CreateThesisKeywordDto.toResponse({
-        ...updateThesisKeyword,
-        names: req.keywords.map((k) => k.name),
-      } as unknown as CreateThesisKeywordDto);
+      return {
+        data: CreateThesisKeywordDto.toResponse(
+          foundThesisKeyword,
+        ) as unknown as IThesisKeyword,
+      };
     } catch (err: unknown) {
       if (err instanceof InternalServerErrorException)
         throw new InternalServerErrorException(
@@ -153,7 +166,10 @@ export class ThesisKeywordService {
     }
   }
 
-  async Delete(thesisKeywordId: number, req: DeleteThesisKeywordDto) {
+  async Delete(
+    thesisKeywordId: number,
+    req: DeleteThesisKeywordDto,
+  ): Promise<Record<string, IThesisKeyword[] | IThesisKeyword>> {
     try {
       if (
         Array.isArray(req.thesisKeywordIds) &&
@@ -169,12 +185,14 @@ export class ThesisKeywordService {
 
         await this.thesisKeywordRepository.delete(req.thesisKeywordIds);
 
-        return foundThesisKeywords.map((thesis) => {
-          return CreateThesisKeywordDto.toResponse({
-            ...thesis,
-            names: thesis.keyword.map((k) => k.name),
-          } as unknown as CreateThesisKeywordDto);
-        });
+        return {
+          data: foundThesisKeywords.map((thesis) => ({
+            id: thesis.id,
+            createdAt: thesis.createdAt,
+            updatedAt: thesis.updatedAt,
+            deletedAt: thesis.deletedAt,
+          })) as unknown as IThesisKeyword[],
+        };
       } else {
         const foundThesisKeyword = await this.thesisKeywordRepository.findOne({
           where: { id: thesisKeywordId },
@@ -186,10 +204,11 @@ export class ThesisKeywordService {
 
         await this.thesisKeywordRepository.delete(thesisKeywordId);
 
-        return CreateThesisKeywordDto.toResponse({
-          ...foundThesisKeyword,
-          names: foundThesisKeyword.keyword.map((k) => k.name),
-        });
+        return {
+          data: CreateThesisKeywordDto.toResponse(
+            foundThesisKeyword,
+          ) as unknown as IThesisKeyword,
+        };
       }
     } catch (err: unknown) {
       if (err instanceof InternalServerErrorException)

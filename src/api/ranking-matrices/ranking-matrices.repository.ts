@@ -1,35 +1,34 @@
 import { OffsetPaginationDto } from '@/common/dto/offset-pagination/offset-pagination.dto';
 import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
-import { ReccomendationEntity } from '@/database/entities/reccomendation.entity';
-import { IReccomendation } from '@/database/interface-model/reccomendation-entity.interface';
+import { RankingMatricesEntity } from '@/database/entities/ranking-matrix.entity';
+import { IRankingMatrices } from '@/database/interface-model/ranking-matrices-entity.interface';
 import { toOrderEnum } from '@/utils/util';
 import { InjectRepository } from '@nestjs/typeorm';
 import { plainToInstance } from 'class-transformer';
 import { Repository, SelectQueryBuilder } from 'typeorm';
-import { ReccomendationPaginationReqQuery } from './dto/query.dto';
+import { ReccomendationPaginationReqQuery } from '../reccomendation/dto/query.dto';
 
-export class ReccomendationRepository extends Repository<ReccomendationEntity> {
+export class RankingMatricesRepository extends Repository<RankingMatricesEntity> {
   constructor(
-    @InjectRepository(ReccomendationEntity)
-    private readonly repo: Repository<ReccomendationEntity>,
+    @InjectRepository(RankingMatricesEntity)
+    private readonly repo: Repository<RankingMatricesEntity>,
   ) {
     super(repo.target, repo.manager, repo.queryRunner);
   }
 
   async Pagination(
     reqQuery: ReccomendationPaginationReqQuery,
-  ): Promise<OffsetPaginatedDto<IReccomendation>> {
+  ): Promise<OffsetPaginatedDto<IRankingMatrices>> {
     const targetName = this.repo.metadata.targetName;
     const query = this.createQueryBuilder(targetName);
 
-    this.applyFilters(query, reqQuery, targetName)
-      .leftJoinAndSelect(`${targetName}.student`, 'student')
-      .leftJoinAndSelect(`${targetName}.lecturer`, 'lecturer');
+    this.applyFilters(query, reqQuery, targetName);
 
     const sortField = [
       { name: 'full_name', alias: `${targetName}.full_name` },
       { name: 'created_at', alias: `${targetName}.createdAt` },
     ].find((sort) => sort.name === reqQuery.sort);
+
     if (sortField) {
       query.orderBy(sortField.alias, toOrderEnum(reqQuery.order));
     } else {
@@ -50,10 +49,16 @@ export class ReccomendationRepository extends Repository<ReccomendationEntity> {
   }
 
   private applyFilters(
-    query: SelectQueryBuilder<ReccomendationEntity>,
-    _req: ReccomendationPaginationReqQuery,
-    _targetName: string,
+    query: SelectQueryBuilder<RankingMatricesEntity>,
+    req: ReccomendationPaginationReqQuery,
+    targetName: string,
   ) {
+    if (req.search) {
+      query.andWhere(`${targetName}.full_name ILIKE :search`, {
+        search: `%${req.search}%`,
+      });
+    }
+
     return query;
   }
 }

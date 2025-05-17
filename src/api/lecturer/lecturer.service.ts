@@ -31,7 +31,7 @@ export class LecturerService {
     private readonly awsService: AwsService,
   ) {}
 
-  async GenerateTemplateExcel() {
+  async GenerateTemplateExcel(): Promise<ExcelJS.Buffer> {
     const columns = [
       { header: 'Nama dosen', key: 'fullName' },
       { header: 'NIDN', key: 'nidn' },
@@ -52,7 +52,10 @@ export class LecturerService {
     }
   }
 
-  async HandleExcelTemplate(file: Express.Multer.File, userId: string) {
+  async HandleExcelTemplate(
+    file: Express.Multer.File,
+    userId: string,
+  ): Promise<Record<string, ILecturer[]>> {
     const workbook = new ExcelJS.Workbook();
     try {
       await workbook.xlsx.load(file.buffer);
@@ -74,12 +77,12 @@ export class LecturerService {
       worksheet.eachRow((row, rowNumber) => {
         if (rowNumber === 1) return;
 
-        const rowData = row.values as any[];
+        const rowData = row.values;
         hasValidRow = true;
 
-        if (!Object.values(TipePembimbingEnum).includes(rowData[5]?.trim())) {
-          errors.push({ row: rowNumber, message: 'Invalid tipe pembimbing' });
-        }
+        // if (!Object.values(TipePembimbingEnum).includes(rowData[5]?.trim())) {
+        //   errors.push({ row: rowNumber, message: 'Invalid tipe pembimbing' });
+        // }
 
         if (!Object.values(ProdiEnum).includes(rowData[3]?.trim())) {
           errors.push({ row: rowNumber, message: 'Invalid prodi' });
@@ -123,7 +126,9 @@ export class LecturerService {
         throw new BadRequestException('Missing data in Excel');
       }
 
-      return await this.lecturerRepository.bulkCreate(lecturers);
+      return {
+        data: await this.lecturerRepository.bulkCreate(lecturers),
+      };
     } catch (err: unknown) {
       if (err instanceof InternalServerErrorException)
         throw new InternalServerErrorException(
@@ -138,7 +143,7 @@ export class LecturerService {
     req: CreateLecturerDto,
     userId: string,
     file: Express.Multer.File,
-  ): Promise<Partial<ILecturer>> {
+  ): Promise<Record<string, ILecturer>> {
     let imageUrl = DEFAULT.IMAGE_DEFAULT;
     const foundLecturer = await this.lecturerRepository.findOneBy({
       nidn: req.nidn,
@@ -164,7 +169,7 @@ export class LecturerService {
 
       const data = await this.lecturerRepository.save(newLecturer);
 
-      return CreateLecturerDto.toResponse(data);
+      return { data: CreateLecturerDto.toResponse(data) as ILecturer };
     } catch (err: unknown) {
       if (err instanceof InternalServerErrorException)
         throw new InternalServerErrorException(
@@ -179,7 +184,7 @@ export class LecturerService {
     req: UpdateLecturerDto,
     lecturerId: string,
     file: Express.Multer.File,
-  ): Promise<Partial<ILecturer>> {
+  ): Promise<Record<string, ILecturer>> {
     let imageUrl = DEFAULT.IMAGE_DEFAULT;
     const foundLecturer = await this.lecturerRepository.findOneBy({
       id: lecturerId as Uuid,
@@ -210,7 +215,8 @@ export class LecturerService {
         imageUrl,
         jumlahBimbingan,
       });
-      return CreateLecturerDto.toResponse(data);
+
+      return { data: CreateLecturerDto.toResponse(data) as ILecturer };
     } catch (err: unknown) {
       if (err instanceof InternalServerErrorException)
         throw new InternalServerErrorException(
@@ -227,7 +233,7 @@ export class LecturerService {
     return this.lecturerRepository.Pagination(reqQuery);
   }
 
-  async Detail(lecturerId: string): Promise<ILecturer> {
+  async Detail(lecturerId: string): Promise<Record<string, ILecturer>> {
     const foundLecturer = await this.lecturerRepository.findOneBy({
       id: lecturerId as Uuid,
     });
@@ -236,13 +242,13 @@ export class LecturerService {
       throw new NotFoundException('Lecturer data found.');
     }
 
-    return foundLecturer;
+    return { data: foundLecturer };
   }
 
   async Delete(
     lecturerId: string,
     req: DeleteLecturerDto,
-  ): Promise<Partial<ILecturer> | Partial<ILecturer>[]> {
+  ): Promise<Record<string, ILecturer | ILecturer[]>> {
     try {
       if (Array.isArray(req?.lecturerIds) && req.lecturerIds.length > 0) {
         const foundLecturers = await this.lecturerRepository.findBy({
@@ -255,16 +261,12 @@ export class LecturerService {
 
         await this.lecturerRepository.bulkDelete(req.lecturerIds);
 
-        return foundLecturers.map((lecturer) =>
-          CreateLecturerDto.toResponse(lecturer),
-        );
+        return {
+          data: foundLecturers.map((lecturer) =>
+            CreateLecturerDto.toResponse(lecturer),
+          ) as ILecturer[],
+        };
       } else {
-        const uuidRegex =
-          /^[0-9a-f]{8}-[0-9a-f]{4}-[4][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-        if (!uuidRegex.test(lecturerId)) {
-          throw new BadRequestException('Invalid UUID format');
-        }
         const foundLecturer = await this.lecturerRepository.findOneBy({
           id: lecturerId as Uuid,
         });
@@ -273,7 +275,9 @@ export class LecturerService {
           throw new NotFoundException('Lecturer not found');
         }
         await this.lecturerRepository.delete(foundLecturer.id);
-        return CreateLecturerDto.toResponse(foundLecturer);
+        return {
+          data: CreateLecturerDto.toResponse(foundLecturer) as ILecturer,
+        };
       }
     } catch (err: unknown) {
       if (err instanceof InternalServerErrorException)

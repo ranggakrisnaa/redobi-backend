@@ -1,4 +1,5 @@
 import { OffsetPaginationDto } from '@/common/dto/offset-pagination/offset-pagination.dto';
+import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
 import { ThesisKeywordsEntity } from '@/database/entities/thesis-keyword.entity';
 import { IThesisKeyword } from '@/database/interface-model/thesis-keyword-entity.interface';
 import { toOrderEnum } from '@/utils/util';
@@ -15,7 +16,9 @@ export class ThesisKeywordRepository extends Repository<ThesisKeywordsEntity> {
     super(repo.target, repo.manager, repo.queryRunner);
   }
 
-  async Pagination(reqQuery: ThesisKeywordReqQuery) {
+  async Pagination(
+    reqQuery: ThesisKeywordReqQuery,
+  ): Promise<OffsetPaginatedDto<IThesisKeyword>> {
     const targetName = this.repo.metadata.targetName;
     const query = this.repo
       .createQueryBuilder(targetName)

@@ -1,0 +1,93 @@
+[
+  {
+    "name": "Keminatan",
+    "weight": 0.3,
+    "type": "Benefit",
+    "subCriteria": [
+      {
+        "name": "Rekayasa Perangkat Lunak",
+        "weight": 0.12
+      },
+      {
+        "name": "Sistem Cerdas",
+        "weight": 0.12
+      },
+      {
+        "name": "Multimedia",
+        "weight": 0.12
+      }
+    ]
+  },
+  {
+    "name": "Linearitas",
+    "weight": 0.25,
+    "type": "Benefit",
+    "subCriteria": [
+      {
+        "name": "Non-Linear",
+        "weight": 0.075
+      },
+      {
+        "name": "Linear",
+        "weight": 0.175
+      }
+    ]
+  },
+  {
+    "name": "Jabatan Fungsionalitas",
+    "weight": 0.2,
+    "type": "Benefit",
+    "subCriteria": [
+      {
+        "name": "Asisten Ahli",
+        "weight": 0.02
+      },
+      {
+        "name": "Lektor 200",
+        "weight": 0.03
+      },
+      {
+        "name": "Lektor 300",
+        "weight": 0.04
+      },
+      {
+        "name": "Lektor Kepala",
+        "weight": 0.05
+      },
+      {
+        "name": "Prefesor",
+        "weight": 0.05
+      }
+    ]
+  },
+  {
+    "name": "Kompetensi Dasar",
+    "weight": 0.15,
+    "type": "Benefit",
+    "subCriteria": [
+      {
+        "name": "Sistem Komputer",
+        "weight": 0.075
+      },
+      {
+        "name": "Teknik Informatika",
+        "weight": 0.075
+      }
+    ]
+  },
+  {
+    "name": "Mata Kuliah",
+    "weight": 0.1,
+    "type": "Benefit",
+    "subCriteria": [
+      {
+        "name": "Sistem Komputer",
+        "weight": 0.005
+      },
+      {
+        "name": "Teknik Informatika",
+        "weight": 0.005
+      }
+    ]
+  }
+]

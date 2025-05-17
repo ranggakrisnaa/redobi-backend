@@ -34,7 +34,7 @@ export class AssessmentService {
     return await this.assessmentRepository.Pagination(reqQuery);
   }
 
-  async Detail(assesmentId: string): Promise<IAssessment> {
+  async Detail(assesmentId: string): Promise<Record<string, IAssessment>> {
     const foundAssessment = await this.assessmentRepository.findOne({
       where: { id: assesmentId as Uuid },
       relations: ['assessmentSubCriteria', 'lecturer'],
@@ -42,10 +42,10 @@ export class AssessmentService {
     if (!foundAssessment) {
       throw new NotFoundException('Assessment data not found');
     }
-    return foundAssessment;
+    return { data: foundAssessment };
   }
 
-  async Create(req: CreateAssessmentDto): Promise<Partial<IAssessment>> {
+  async Create(req: CreateAssessmentDto): Promise<Record<string, IAssessment>> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -107,8 +107,9 @@ export class AssessmentService {
       );
 
       await queryRunner.commitTransaction();
-
-      return CreateAssessmentDto.toResponse(newAssessment);
+      return {
+        data: CreateAssessmentDto.toResponse(newAssessment) as IAssessment,
+      };
     } catch (err: unknown) {
       await queryRunner.rollbackTransaction();
 
@@ -123,7 +124,10 @@ export class AssessmentService {
     }
   }
 
-  async Update(req: UpdateAssessmentDto, assessmentId: string) {
+  async Update(
+    req: UpdateAssessmentDto,
+    assessmentId: string,
+  ): Promise<Record<any, IAssessment>> {
     const foundAssessment = await this.assessmentRepository.findOne({
       where: { id: assessmentId as Uuid },
       relations: ['assessmentSubCriteria'],
@@ -153,7 +157,9 @@ export class AssessmentService {
         updateAssessmentSubCriteria,
       );
 
-      return CreateAssessmentDto.toResponse(foundAssessment);
+      return {
+        data: CreateAssessmentDto.toResponse(foundAssessment) as IAssessment,
+      };
     } catch (err: unknown) {
       if (err instanceof InternalServerErrorException)
         throw new InternalServerErrorException(
@@ -164,7 +170,10 @@ export class AssessmentService {
     }
   }
 
-  async Delete(assessmentId: string, req: DeleteAssessmentDto) {
+  async Delete(
+    assessmentId: string,
+    req: DeleteAssessmentDto,
+  ): Promise<Record<string, IAssessment[] | IAssessment>> {
     try {
       if (Array.isArray(req.assessmentIds) && req.assessmentIds.length > 0) {
         const foundAssessments = await this.assessmentRepository.find({
@@ -176,9 +185,11 @@ export class AssessmentService {
         }
         await this.assessmentRepository.delete(req.assessmentIds);
 
-        return foundAssessments.map((assessment) =>
-          CreateAssessmentDto.toResponse(assessment),
-        );
+        return {
+          data: foundAssessments.map((assessment) =>
+            CreateAssessmentDto.toResponse(assessment),
+          ) as IAssessment[],
+        };
       } else {
         const foundAssessment = await this.assessmentRepository.findOne({
           where: { id: assessmentId as Uuid },
@@ -189,7 +200,9 @@ export class AssessmentService {
         }
         await this.assessmentRepository.delete(assessmentId);
 
-        return CreateAssessmentDto.toResponse(foundAssessment);
+        return {
+          data: CreateAssessmentDto.toResponse(foundAssessment) as IAssessment,
+        };
       }
     } catch (err: unknown) {
       if (err instanceof InternalServerErrorException)

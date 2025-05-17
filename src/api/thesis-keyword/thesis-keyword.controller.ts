@@ -1,3 +1,5 @@
+import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
+import { IThesisKeyword } from '@/database/interface-model/thesis-keyword-entity.interface';
 import { ApiAuth } from '@/decorators/http.decorators';
 import {
   Body,
@@ -28,7 +30,9 @@ export class ThesisKeywordController {
     summary: 'Pagination Thesis Keyword',
   })
   @Get()
-  async Pagination(@Query() reqQuery: ThesisKeywordReqQuery) {
+  async Pagination(
+    @Query() reqQuery: ThesisKeywordReqQuery,
+  ): Promise<OffsetPaginatedDto<IThesisKeyword>> {
     return await this.thesisKeywordService.Pagination(reqQuery);
   }
 
@@ -36,7 +40,9 @@ export class ThesisKeywordController {
     summary: 'Pagination Thesis Keyword',
   })
   @Get(':thesisKeywordId')
-  async Detail(@Param('thesisKeywordId') thesisKeywordId: string) {
+  async Detail(
+    @Param('thesisKeywordId') thesisKeywordId: string,
+  ): Promise<Record<string, IThesisKeyword>> {
     return await this.thesisKeywordService.Detail(
       Number.parseInt(thesisKeywordId),
     );
@@ -47,7 +53,9 @@ export class ThesisKeywordController {
     type: CreateThesisKeywordDto,
   })
   @Post()
-  async Create(@Body() req: CreateThesisKeywordDto) {
+  async Create(
+    @Body() req: CreateThesisKeywordDto,
+  ): Promise<Record<string, Partial<CreateThesisKeywordDto>>> {
     return await this.thesisKeywordService.Create(req);
   }
 
@@ -59,7 +67,7 @@ export class ThesisKeywordController {
   async Update(
     @Param('thesisKeywordId') thesisKeywordId: string,
     @Body() req: UpdateThesisKeywordDto,
-  ) {
+  ): Promise<Record<any, Partial<UpdateThesisKeywordDto>>> {
     return await this.thesisKeywordService.Update(+thesisKeywordId, req);
   }
 
@@ -70,7 +78,7 @@ export class ThesisKeywordController {
   async Delete(
     @Param('thesisKeywordId') thesisKeywordId: string,
     @Body() req: DeleteThesisKeywordDto,
-  ) {
+  ): Promise<Record<string, IThesisKeyword[] | IThesisKeyword>> {
     return await this.thesisKeywordService.Delete(
       Number.parseInt(thesisKeywordId),
       req,

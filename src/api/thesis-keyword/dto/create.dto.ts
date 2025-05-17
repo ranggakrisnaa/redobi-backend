@@ -14,11 +14,12 @@ export class CreateThesisKeywordDto {
   @StringField({ each: true })
   names: string[];
 
-  static toResponse(dto: CreateThesisKeywordDto) {
-    return dto?.names.map((name) => ({
+  static toResponse(dto: Partial<CreateThesisKeywordDto>) {
+    return {
       id: dto.id,
-      category: dto.category,
-      name: name,
-    }));
+      createdAt: dto.createdAt,
+      updateAt: dto.updatedAt,
+      deletedAt: dto.deletedAt,
+    };
   }
 }

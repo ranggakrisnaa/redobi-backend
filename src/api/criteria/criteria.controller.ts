@@ -1,7 +1,6 @@
 import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
 import { ICriteria } from '@/database/interface-model/criteria-entity.interface';
 import { ApiAuth } from '@/decorators/http.decorators';
-import { AuthGuard } from '@/guards/auth.guard';
 import {
   Body,
   Controller,
@@ -11,7 +10,6 @@ import {
   Post,
   Put,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { CriteriaService } from './criteria.service';
@@ -25,7 +23,8 @@ import { UpdateCriteriaDto } from './dto/update.dto';
   path: 'criteria',
   version: '1',
 })
-@UseGuards(AuthGuard)
+// TODO: "Activated this if usage"
+// @UseGuards(AuthGuard)
 export class CriteriaController {
   constructor(private readonly criteriaService: CriteriaService) {}
 
@@ -43,7 +42,9 @@ export class CriteriaController {
     summary: 'Get detail criteria',
   })
   @Get(':criteriaId')
-  async Detail(@Param('criteriaId') criteriaId: string): Promise<ICriteria> {
+  async Detail(
+    @Param('criteriaId') criteriaId: string,
+  ): Promise<Record<string, ICriteria>> {
     return await this.criteriaService.Detail(Number.parseInt(criteriaId));
   }
 
@@ -52,7 +53,9 @@ export class CriteriaController {
     summary: 'Create criteria',
   })
   @Post()
-  async Create(@Body() req: CreateCriteriaDto): Promise<Partial<ICriteria>> {
+  async Create(
+    @Body() req: CreateCriteriaDto,
+  ): Promise<Record<string, ICriteria>> {
     return await this.criteriaService.Create(req);
   }
 
@@ -64,7 +67,7 @@ export class CriteriaController {
   async Update(
     @Body() req: UpdateCriteriaDto,
     @Param('criteriaId') criteriaId: string,
-  ): Promise<ICriteria> {
+  ): Promise<Record<string, ICriteria>> {
     return await this.criteriaService.Update(req, Number.parseInt(criteriaId));
   }
 
@@ -75,7 +78,7 @@ export class CriteriaController {
   async Delete(
     @Param('criteriaId') criteriaId: string,
     @Body() req: DeleteCriteriaDto,
-  ): Promise<Partial<ICriteria> | Partial<ICriteria>[]> {
+  ): Promise<Record<string, ICriteria[] | ICriteria>> {
     return await this.criteriaService.Delete(+criteriaId, req);
   }
 }

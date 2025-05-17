@@ -42,7 +42,7 @@ export class AssessmentController {
   @Get(':assessmentId')
   async Detail(
     @Param('assessmentId') assessmentId: string,
-  ): Promise<IAssessment> {
+  ): Promise<Record<any, IAssessment>> {
     return await this.assessmentService.Detail(assessmentId);
   }
 
@@ -53,7 +53,7 @@ export class AssessmentController {
   @Post()
   async Create(
     @Body() req: CreateAssessmentDto,
-  ): Promise<Partial<IAssessment>> {
+  ): Promise<Record<string, IAssessment>> {
     return await this.assessmentService.Create(req);
   }
 
@@ -65,7 +65,7 @@ export class AssessmentController {
   async Update(
     @Body() req: UpdateAssessmentDto,
     @Param('assessmentId') assessmentId: string,
-  ) {
+  ): Promise<Record<string, IAssessment>> {
     return await this.assessmentService.Update(req, assessmentId);
   }
 
@@ -77,7 +77,7 @@ export class AssessmentController {
   async Delete(
     @Param('assessmentId') assessmentId: string,
     @Body() req: DeleteAssessmentDto,
-  ) {
+  ): Promise<Record<string, IAssessment[] | IAssessment>> {
     return await this.assessmentService.Delete(assessmentId, req);
   }
 }

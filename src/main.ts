@@ -17,6 +17,7 @@ import { join } from 'path';
 import { AppModule } from './app.module';
 import { type AllConfigType } from './config/config.type';
 import { GlobalExceptionFilter } from './filters/global-exception.filter';
+import { SuccessResponseInterceptor } from './filters/success-response.filter';
 import setupSwagger from './utils/setup-swagger';
 
 async function bootstrap() {
@@ -66,7 +67,7 @@ async function bootstrap() {
   });
 
   app.useGlobalFilters(new GlobalExceptionFilter(configService));
-  // app.useGlobalFilters(new SuccessResponseFilter());
+  app.useGlobalInterceptors(new SuccessResponseInterceptor());
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,
