@@ -2,7 +2,6 @@ import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto
 import { ILecturer } from '@/database/interface-model/lecturer-entity.interface';
 import { CurrentUser } from '@/decorators/current-user.decorator';
 import { ApiAuth } from '@/decorators/http.decorators';
-import { AuthGuard } from '@/guards/auth.guard';
 import {
   Body,
   Controller,
@@ -15,7 +14,6 @@ import {
   Query,
   Res,
   UploadedFile,
-  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -34,7 +32,7 @@ import { LecturerService } from './lecturer.service';
   path: 'lecturers',
   version: '1',
 })
-@UseGuards(AuthGuard)
+// @UseGuards(AuthGuard)
 export class LecturerController {
   constructor(private readonly lecturerService: LecturerService) {}
 
@@ -42,7 +40,7 @@ export class LecturerController {
     summary: 'Generate Template Excel',
   })
   @Get('templates')
-  async GenerateTemplateExcel(@Res() res: Response) {
+  async GenerateTemplateExcel(@Res() res: Response): Promise<void> {
     const bufferFile = await this.lecturerService.GenerateTemplateExcel();
 
     res.set({
@@ -64,7 +62,7 @@ export class LecturerController {
   async HandleExcelTemplate(
     @UploadedFile() file: Express.Multer.File,
     @CurrentUser() userToken: JwtPayloadType,
-  ): Promise<ILecturer[]> {
+  ) {
     return await this.lecturerService.HandleExcelTemplate(file, userToken.id);
   }
 
@@ -80,7 +78,7 @@ export class LecturerController {
     @Body() req: CreateLecturerDto,
     @CurrentUser() userToken: JwtPayloadType,
     @UploadedFile() file: Express.Multer.File,
-  ): Promise<Partial<ILecturer>> {
+  ): Promise<Record<string, ILecturer>> {
     return await this.lecturerService.Create(req, userToken.id, file);
   }
 
@@ -96,7 +94,7 @@ export class LecturerController {
     @Body() req: UpdateLecturerDto,
     @Param('lecturerId', ParseUUIDPipe) lecturerId: string,
     @UploadedFile() file: Express.Multer.File,
-  ): Promise<Partial<ILecturer>> {
+  ): Promise<Record<string, ILecturer>> {
     return await this.lecturerService.Update(req, lecturerId, file);
   }
 
@@ -116,7 +114,7 @@ export class LecturerController {
   @Get(':lecturerId')
   async Detail(
     @Param('lecturerId', ParseUUIDPipe) lecturerId: string,
-  ): Promise<ILecturer> {
+  ): Promise<Record<string, ILecturer>> {
     return await this.lecturerService.Detail(lecturerId);
   }
 
@@ -128,7 +126,7 @@ export class LecturerController {
   async Delete(
     @Param('lecturerId') lecturerId: string,
     @Body() req: DeleteLecturerDto,
-  ): Promise<Partial<ILecturer> | Partial<ILecturer>[]> {
+  ): Promise<Record<string, ILecturer | ILecturer[]>> {
     return await this.lecturerService.Delete(lecturerId, req);
   }
 }

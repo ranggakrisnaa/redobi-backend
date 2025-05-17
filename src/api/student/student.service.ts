@@ -41,7 +41,7 @@ export class StudentService {
     req: CreateStudentDto,
     userId: string,
     file?: Express.Multer.File,
-  ): Promise<Partial<IStudent>> {
+  ): Promise<Record<string, IStudent>> {
     let imageUrl = DEFAULT.IMAGE_DEFAULT;
     const foundStudent = await this.studentRepository.findOneBy({
       nim: req.nim,
@@ -62,7 +62,7 @@ export class StudentService {
       });
 
       const data = await this.studentRepository.save(newStudent);
-      return CreateStudentDto.toResponse(data);
+      return { data: CreateStudentDto.toResponse(data) as IStudent };
     } catch (err: unknown) {
       throw new InternalServerErrorException(
         err instanceof Error ? err.message : 'Unexpected error',
@@ -74,7 +74,7 @@ export class StudentService {
     req: UpdateStudentDto,
     studentId: string,
     file: Express.Multer.File,
-  ): Promise<Partial<IStudent>> {
+  ): Promise<Record<string, IStudent>> {
     let imageUrl = DEFAULT.IMAGE_DEFAULT;
     const foundStudent = await this.studentRepository.findOneBy({
       id: studentId as Uuid,
@@ -99,7 +99,7 @@ export class StudentService {
         ...req,
         imageUrl,
       });
-      return CreateStudentDto.toResponse(data);
+      return { data: CreateStudentDto.toResponse(data) as IStudent };
     } catch (err: unknown) {
       throw new InternalServerErrorException(
         err instanceof Error ? err.message : 'Unexpected error',
@@ -107,7 +107,7 @@ export class StudentService {
     }
   }
 
-  async Detail(studentId: string): Promise<IStudent> {
+  async Detail(studentId: string): Promise<Record<string, IStudent>> {
     const foundStudent = await this.studentRepository.findOneBy({
       id: studentId as Uuid,
     });
@@ -115,13 +115,13 @@ export class StudentService {
       throw new NotFoundException('Student not found');
     }
 
-    return foundStudent;
+    return { data: foundStudent };
   }
 
   async Delete(
     studentId: string,
     req: DeleteStudentDto,
-  ): Promise<Partial<IStudent> | Partial<IStudent>[]> {
+  ): Promise<Record<string, IStudent | IStudent[]>> {
     try {
       if (Array.isArray(req?.studentIds) && req.studentIds.length > 0) {
         const foundStudents = await this.studentRepository.findBy({
@@ -134,17 +134,12 @@ export class StudentService {
 
         await this.studentRepository.bulkDelete(req.studentIds);
 
-        return foundStudents.map((student) =>
-          CreateStudentDto.toResponse(student),
-        );
+        return {
+          data: foundStudents.map((student) =>
+            CreateStudentDto.toResponse(student),
+          ) as IStudent[],
+        };
       } else {
-        const uuidRegex =
-          /^[0-9a-f]{8}-[0-9a-f]{4}-[4][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-        if (!uuidRegex.test(studentId)) {
-          throw new BadRequestException('Invalid UUID format');
-        }
-
         const foundStudent = await this.studentRepository.findOneBy({
           id: studentId as Uuid,
         });
@@ -154,7 +149,7 @@ export class StudentService {
         }
 
         await this.studentRepository.delete(foundStudent.id);
-        return CreateStudentDto.toResponse(foundStudent);
+        return { data: CreateStudentDto.toResponse(foundStudent) as IStudent };
       }
     } catch (err: unknown) {
       if (err instanceof InternalServerErrorException)
@@ -166,7 +161,7 @@ export class StudentService {
     }
   }
 
-  async GenerateTemplateExcel(): Promise<Buffer | ArrayBuffer> {
+  async GenerateTemplateExcel(): Promise<ExcelJS.Buffer> {
     const columns = [
       { header: 'Nama Mahasiswa', key: 'fullName' },
       { header: 'NIM', key: 'nim' },
@@ -192,7 +187,7 @@ export class StudentService {
   async HandleExcelTemplate(
     file: Express.Multer.File,
     userId: string,
-  ): Promise<IStudent[]> {
+  ): Promise<Record<string, IStudent[]>> {
     const workbook = new ExcelJS.Workbook();
     try {
       await workbook.xlsx.load(file.buffer);
@@ -272,7 +267,7 @@ export class StudentService {
         throw new BadRequestException('Missing data in Excel');
       }
 
-      return await this.studentRepository.bulkCreate(students);
+      return { data: await this.studentRepository.bulkCreate(students) };
     } catch (err: unknown) {
       if (err instanceof InternalServerErrorException)
         throw new InternalServerErrorException(

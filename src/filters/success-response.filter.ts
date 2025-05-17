@@ -1,50 +1,37 @@
 import { SuccessDto } from '@/common/dto/success.dto';
-import { CustomSuccessResponseEnum } from '@/database/enums/custom-success-response.enum.';
 import { RequestMethodEnum } from '@/database/enums/request-method.enum';
 import {
-  ArgumentsHost,
-  Catch,
-  ExceptionFilter,
+  CallHandler,
+  ExecutionContext,
   HttpStatus,
+  Injectable,
+  NestInterceptor,
 } from '@nestjs/common';
-import { Response } from 'express';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 
-@Catch()
-export class SuccessResponseFilter<T> implements ExceptionFilter {
-  catch(exception: unknown, host: ArgumentsHost) {
-    const ctx = host.switchToHttp();
-    const response = ctx.getResponse<Response>();
-    const request = ctx.getRequest<Request>();
+@Injectable()
+export class SuccessResponseInterceptor<T>
+  implements NestInterceptor<T, SuccessDto<T>>
+{
+  intercept(
+    context: ExecutionContext,
+    next: CallHandler,
+  ): Observable<SuccessDto<T>> {
+    const request = context.switchToHttp().getRequest();
     const method = request.method;
-    const statusCode = response.statusCode || HttpStatus.OK;
-    console.log(exception);
 
-    let customMessage: string;
-    switch (method) {
-      case RequestMethodEnum.GET:
-        customMessage = CustomSuccessResponseEnum.CUSTOM_MESSAGE_GET;
-        break;
-      case RequestMethodEnum.POST:
-        customMessage = CustomSuccessResponseEnum.CUSTOM_MESSAGE_POST;
-        break;
-      case RequestMethodEnum.PUT:
-        customMessage = CustomSuccessResponseEnum.CUSTOM_MESSAGE_PUT;
-        break;
-      case RequestMethodEnum.DELETE:
-        customMessage = CustomSuccessResponseEnum.CUSTOM_MESSAGE_DELETE;
-        break;
-      default:
-        customMessage = CustomSuccessResponseEnum.CUSTOM_MESSAGE_DEFAULT;
-        break;
-    }
-
-    const successResponse = {
-      timestamp: new Date().toISOString(),
-      statusCode,
-      message: customMessage,
-      data: exception as T,
-    } as SuccessDto<T>;
-
-    response.status(statusCode).json(successResponse);
+    return next.handle().pipe(
+      map(({ message, ...rest }) => ({
+        timestamp: new Date().toISOString(),
+        statusCode:
+          method === RequestMethodEnum.POST
+            ? HttpStatus.CREATED
+            : HttpStatus.OK,
+        message: message,
+        data: rest.data,
+        pagination: rest.pagination,
+      })),
+    );
   }
 }

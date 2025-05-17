@@ -22,17 +22,17 @@ export class CriteriaService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async Create(req: CreateCriteriaDto): Promise<Partial<ICriteria>> {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
+  async Create(req: CreateCriteriaDto): Promise<Record<string, ICriteria>> {
     const foundCriteria = await this.criteriaRepository.findOneBy({
       name: req.name,
     });
     if (foundCriteria) {
       throw new ForbiddenException('Criteria already exist');
     }
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
     try {
       const criteria = await this.criteriaRepository.createtWithTransaction(
         queryRunner,
@@ -57,16 +57,9 @@ export class CriteriaService {
         );
       }
 
-      const fullEntity = {
-        ...criteria,
-        subCriteria,
-      };
-
       await queryRunner.commitTransaction();
 
-      return CreateCriteriaDto.toResponse(
-        fullEntity as CreateCriteriaDto,
-      ) as ICriteria;
+      return { data: CreateCriteriaDto.toResponse(criteria) as ICriteria };
     } catch (err: unknown) {
       await queryRunner.rollbackTransaction();
 
@@ -81,7 +74,10 @@ export class CriteriaService {
     }
   }
 
-  async Update(req: UpdateCriteriaDto, criteriaId: number): Promise<ICriteria> {
+  async Update(
+    req: UpdateCriteriaDto,
+    criteriaId: number,
+  ): Promise<Record<string, ICriteria>> {
     const foundCriteria = await this.criteriaRepository.findOne({
       where: { id: criteriaId },
       relations: ['subCriteria'],
@@ -123,11 +119,7 @@ export class CriteriaService {
           });
         }
       }
-
-      return CreateCriteriaDto.toResponse({
-        ...req,
-        id: foundCriteria.id,
-      }) as ICriteria;
+      return { data: CreateCriteriaDto.toResponse(foundCriteria) as ICriteria };
     } catch (err: unknown) {
       if (err instanceof InternalServerErrorException)
         throw new InternalServerErrorException(
@@ -138,7 +130,7 @@ export class CriteriaService {
     }
   }
 
-  async Detail(criteriaId: number): Promise<ICriteria> {
+  async Detail(criteriaId: number): Promise<Record<string, ICriteria>> {
     const foundCriteria = await this.criteriaRepository.findOne({
       where: { id: criteriaId },
       relations: ['subCriteria'],
@@ -146,7 +138,7 @@ export class CriteriaService {
     if (!foundCriteria) {
       throw new NotFoundException('Criteria not found');
     }
-    return CreateCriteriaDto.toResponse(foundCriteria) as ICriteria;
+    return { data: foundCriteria };
   }
 
   async Pagination(
@@ -158,7 +150,7 @@ export class CriteriaService {
   async Delete(
     criteriaId: number,
     req: DeleteCriteriaDto,
-  ): Promise<Partial<ICriteria> | Partial<ICriteria>[]> {
+  ): Promise<Record<string, ICriteria[] | ICriteria>> {
     try {
       if (Array.isArray(req?.criteriaIds) && req.criteriaIds.length > 0) {
         const foundCriteria = await this.criteriaRepository.find({
@@ -174,12 +166,14 @@ export class CriteriaService {
 
         await this.criteriaRepository.delete(req.criteriaIds);
 
-        return foundCriteria.map((criteria) =>
-          CreateCriteriaDto.toResponse({
-            ...criteria,
-            subCriteria: criteria.subCriteria,
-          }),
-        ) as ICriteria[];
+        return {
+          data: foundCriteria.map((criteria) =>
+            CreateCriteriaDto.toResponse({
+              ...criteria,
+              subCriteria: criteria.subCriteria,
+            }),
+          ) as ICriteria[],
+        };
       } else {
         const foundCriteria = await this.criteriaRepository.findOne({
           where: {
@@ -193,7 +187,9 @@ export class CriteriaService {
 
         await this.criteriaRepository.delete(criteriaId);
 
-        return CreateCriteriaDto.toResponse(foundCriteria) as ICriteria;
+        return {
+          data: CreateCriteriaDto.toResponse(foundCriteria) as ICriteria,
+        };
       }
     } catch (err: unknown) {
       if (err instanceof InternalServerErrorException)

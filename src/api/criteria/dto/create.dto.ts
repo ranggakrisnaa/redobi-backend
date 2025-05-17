@@ -28,17 +28,12 @@ export class CreateCriteriaDto {
   @ArrayMinSize(1, { message: 'At least 1 sub-criteria must be filled.' })
   subCriteria: CreateSubCriteria[];
 
-  static toResponse(dto: CreateCriteriaDto) {
+  static toResponse(dto: Partial<CreateCriteriaDto>) {
     return {
       id: dto.id,
-      name: dto.name,
-      weight: dto.weight,
-      type: dto.type,
-      subCriteria: dto.subCriteria?.map((sub: CreateSubCriteria) => ({
-        id: sub.id,
-        name: sub.name,
-        weight: sub.weight,
-      })),
+      createdAt: dto.createdAt,
+      updatedAt: dto.updatedAt,
+      deletedAt: dto.deletedAt,
     };
   }
 }

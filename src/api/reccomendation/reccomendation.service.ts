@@ -1,16 +1,30 @@
+import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
+import { ReccomendationStageEnum } from '@/common/enums/reccomendation-stage.enum';
 import { Uuid } from '@/common/types/common.type';
 import { CriteriaTypeEnum } from '@/database/enums/criteria-type.enum';
 import { ThesisKeywordCategoryEnum } from '@/database/enums/thesis-keyword-category.enum';
 import { TipePembimbingEnum } from '@/database/enums/tipe-pembimbing.enum';
 import { INormalizedMatrices } from '@/database/interface-model/normalized-matrices-entity.interface';
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { IRankingMatrices } from '@/database/interface-model/ranking-matrices-entity.interface';
+import { IReccomendation } from '@/database/interface-model/reccomendation-entity.interface';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
+import { DataSource, In } from 'typeorm';
 import { AssessmentRepository } from '../assessment/assessment.repository';
 import { LecturerRepository } from '../lecturer/lecturer.repository';
+import { DeleteNormalizedMatrix } from '../normalized-matrix/dto/delete.dto';
 import { NormalizedMatrixRepository } from '../normalized-matrix/normalized-matrix.repository';
+import { DeleteRankingMatrix } from '../ranking-matrices/dto/delete.dto';
 import { RankingMatricesRepository } from '../ranking-matrices/ranking-matrices.repository';
 import { RankingNormalizedMatricesRepository } from '../ranking-normalized-matrices/ranking-normalized-matrices.repository';
 import { StudentRepository } from '../student/student.repository';
 import { ThesisKeywordRepository } from '../thesis-keyword/thesis-keyword.repository';
+import { DeleteReccomendationDto } from './dto/delete.dto';
+import { ReccomendationPaginationReqQuery } from './dto/query.dto';
+import { UpdateReccomendationDto } from './dto/update.dto';
 import { ReccomendationRepository } from './reccomendation.repository';
 
 @Injectable()
@@ -24,19 +38,62 @@ export class ReccomendationService {
     private readonly thesisKeywordRepository: ThesisKeywordRepository,
     private readonly studentRepository: StudentRepository,
     private readonly lecturerRepository: LecturerRepository,
+    private dataSource: DataSource,
   ) {}
 
-  async Pagination() {}
+  async Pagination(
+    reqQuery: ReccomendationPaginationReqQuery,
+  ): Promise<
+    OffsetPaginatedDto<INormalizedMatrices | IRankingMatrices | IReccomendation>
+  > {
+    try {
+      let responseData: OffsetPaginatedDto<
+        INormalizedMatrices | IRankingMatrices | IReccomendation
+      >;
+      switch (reqQuery.stage) {
+        case ReccomendationStageEnum.NORMALIZATION:
+          responseData =
+            await this.normalizedMatrixRepository.Pagination(reqQuery);
+          break;
+        case ReccomendationStageEnum.RANKING_NORMALIZATION:
+          responseData =
+            await this.rankingMatricesRepository.Pagination(reqQuery);
+          break;
+        case ReccomendationStageEnum.RECCOMENDATION:
+          responseData =
+            await this.reccomendationRepository.Pagination(reqQuery);
+          break;
+        default:
+          console.log('Stage Reccomendation not found');
+          break;
+      }
+
+      return responseData;
+    } catch (err: unknown) {
+      console.log(err);
+      if (err instanceof InternalServerErrorException)
+        throw new InternalServerErrorException(
+          err instanceof Error ? err.message : 'Unexpected error',
+        );
+
+      throw err;
+    }
+  }
 
   async Detail() {}
 
-  async CreateNormalizationMatrix() {
+  async CreateNormalizationMatrix(): Promise<Record<string, string>> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
     try {
       const allAssessments = await this.assessmentRepository.find({
         relations: [
           'assessmentSubCriteria',
           'assessmentSubCriteria.subCriteria',
           'assessmentSubCriteria.subCriteria.criteria',
+          'lecturer',
         ],
         order: {
           assessmentSubCriteria: {
@@ -46,33 +103,64 @@ export class ReccomendationService {
         },
       });
 
+      const existingNormalizedMatrices =
+        await this.normalizedMatrixRepository.find();
+      const normalizedMatrixMap = new Map(
+        existingNormalizedMatrices.map((matrix) => [
+          `${matrix.lecturerId}-${matrix.criteriaId}`,
+          matrix,
+        ]),
+      );
+
       const subCriteriaScoresMap = new Map<
         number,
         { scores: number[]; type: CriteriaTypeEnum }
       >();
+      const bulkUpdateData = [];
+      const bulkInsertData = [];
 
-      let foundNormalize: INormalizedMatrices[] = [];
+      const lecturersToUpdate = [];
+
       for (const assessment of allAssessments) {
+        if (!assessment.lecturer.tipePembimbing) {
+          const hasValidLinear = assessment.assessmentSubCriteria.some(
+            (sub) => sub.subCriteria.name === 'Linear' && sub.score > 0,
+          );
+          const hasValidAsistenAhli = assessment.assessmentSubCriteria.some(
+            (sub) => sub.subCriteria.name === 'Asisten Ahli' && sub.score > 0,
+          );
+
+          const tipe =
+            hasValidLinear && hasValidAsistenAhli
+              ? TipePembimbingEnum.PEMBIMBING_SATU
+              : TipePembimbingEnum.PEMBIMBING_DUA;
+
+          lecturersToUpdate.push({
+            id: assessment.lecturerId,
+            tipePembimbing: tipe,
+          });
+        }
+
         for (const sub of assessment.assessmentSubCriteria) {
-          const normalized = await this.normalizedMatrixRepository.find();
-
-          foundNormalize.push(...normalized);
-
           const subId = sub.subCriteriaId;
           const criteriaType = sub.subCriteria.criteria.type;
 
           if (!subCriteriaScoresMap.has(subId)) {
-            subCriteriaScoresMap.set(subId, { scores: [], type: criteriaType });
+            subCriteriaScoresMap.set(subId, {
+              scores: [],
+              type: criteriaType,
+            });
           }
 
-          subCriteriaScoresMap.get(subId)!.scores.push(sub.score);
+          subCriteriaScoresMap.get(subId).scores.push(sub.score);
         }
       }
 
-      const normalizedMatrixMap = new Map<string, INormalizedMatrices>();
-      for (const matrix of foundNormalize) {
-        const key = `${matrix.lecturerId}-${matrix.criteriaId}`;
-        normalizedMatrixMap.set(key, matrix);
+      if (lecturersToUpdate.length > 0) {
+        await queryRunner.manager.save(
+          this.lecturerRepository.metadata.target,
+          lecturersToUpdate,
+        );
       }
 
       const subCriteriaScoreMap = new Map<number, number>();
@@ -86,78 +174,90 @@ export class ReccomendationService {
         subCriteriaScoreMap.set(subId, value);
       }
 
-      const entities = allAssessments.flatMap((assessment) => {
-        return assessment.assessmentSubCriteria.map((sub) => {
+      const groupedNormalizedValues = new Map<string, number>();
+      const entryToGroupKey = new Map<
+        string,
+        { lecturerId: string; criteriaId: number }
+      >();
+
+      for (const assessment of allAssessments) {
+        for (const sub of assessment.assessmentSubCriteria) {
           const criteria = sub.subCriteria.criteria;
-          const refValue = subCriteriaScoreMap.get(sub.subCriteriaId) ?? 1;
+          const refValue = subCriteriaScoreMap.get(sub.subCriteriaId) || 1;
+          const key = `${assessment.lecturerId}-${criteria.id}`;
 
           let normalizedScore = 0;
           if (criteria.type === CriteriaTypeEnum.BENEFIT) {
             normalizedScore = refValue > 0 ? sub.score / refValue : 0;
-          } else if (criteria.type === CriteriaTypeEnum.COST) {
+            console.log(normalizedScore);
+          } else {
             normalizedScore = sub.score > 0 ? refValue / sub.score : 0;
           }
 
-          return {
-            criteriaId: criteria.id,
+          groupedNormalizedValues.set(
+            key,
+            (groupedNormalizedValues.get(key) || 0) + normalizedScore,
+          );
+
+          entryToGroupKey.set(key, {
             lecturerId: assessment.lecturerId,
-            normalizedValue: normalizedScore,
-          };
-        });
-      });
-
-      const groupedMap = new Map<
-        string,
-        { lecturerId: string; criteriaId: number; totalNormalizedValue: number }
-      >();
-
-      for (const entry of entities) {
-        const key = `${entry.lecturerId}-${entry.criteriaId}`;
-        if (!groupedMap.has(key)) {
-          groupedMap.set(key, {
-            lecturerId: entry.lecturerId,
-            criteriaId: entry.criteriaId,
-            totalNormalizedValue: 0,
+            criteriaId: criteria.id,
           });
         }
-
-        groupedMap.get(key)!.totalNormalizedValue += entry.normalizedValue;
       }
 
-      const result = Array.from(groupedMap.values()).map((item) => ({
-        lecturerId: item.lecturerId,
-        criteriaId: item.criteriaId,
-        normalizedValue: item.totalNormalizedValue,
-      }));
-
-      for (const data of result) {
-        const existingRecord = normalizedMatrixMap.get(
-          `${data.lecturerId}-${data.criteriaId}`,
-        );
+      for (const [key, totalValue] of groupedNormalizedValues.entries()) {
+        const { lecturerId, criteriaId } = entryToGroupKey.get(key);
+        const existingRecord = normalizedMatrixMap.get(key);
 
         if (existingRecord) {
-          await this.normalizedMatrixRepository.update(existingRecord.id, {
-            normalizedValue: data.normalizedValue,
+          bulkUpdateData.push({
+            id: existingRecord.id,
+            normalizedValue: totalValue,
           });
         } else {
-          await this.normalizedMatrixRepository.save(data);
+          bulkInsertData.push({
+            lecturerId,
+            criteriaId,
+            normalizedValue: totalValue,
+          });
         }
       }
+
+      if (bulkUpdateData.length > 0) {
+        await queryRunner.manager.save(
+          this.normalizedMatrixRepository.metadata.target,
+          bulkUpdateData,
+        );
+      }
+
+      if (bulkInsertData.length > 0) {
+        await queryRunner.manager.insert(
+          this.normalizedMatrixRepository.metadata.target,
+          bulkInsertData,
+        );
+      }
+
+      await queryRunner.commitTransaction();
+
       return {
         message: 'Matrix normalization created successfully.',
       };
-    } catch (err: unknown) {
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+
       if (err instanceof InternalServerErrorException) {
         throw new InternalServerErrorException(
           err instanceof Error ? err.message : 'Unexpected error',
         );
       }
-
       throw err;
+    } finally {
+      await queryRunner.release();
     }
   }
 
-  async NormalizationMatricesRanking() {
+  async NormalizationMatrixRanking(): Promise<Record<string, string>> {
     try {
       const [foundMatrices, foundTotalValues] = await Promise.all([
         this.normalizedMatrixRepository.find(),
@@ -198,6 +298,10 @@ export class ReccomendationService {
           rankingMatricesId: rankingMatrix.id,
         });
       }
+
+      return {
+        message: 'Matrix normalization ranknig created successfully.',
+      };
     } catch (err: unknown) {
       if (err instanceof InternalServerErrorException)
         throw new InternalServerErrorException(
@@ -206,13 +310,9 @@ export class ReccomendationService {
 
       throw err;
     }
-
-    return {
-      message: 'Matrix normalization created successfully.',
-    };
   }
 
-  async Create() {
+  async CreateReccomendation(): Promise<Record<string, string>> {
     try {
       const [foundAllRankings, foundAllStudents] = await Promise.all([
         this.rankingMatricesRepository.find({
@@ -324,9 +424,12 @@ export class ReccomendationService {
           jumlahBimbingan: actualStudentCount,
         });
       }
+
+      return {
+        message: 'Reccomendation created successfully.',
+      };
     } catch (err: unknown) {
       console.log(err);
-
       if (err instanceof InternalServerErrorException)
         throw new InternalServerErrorException(
           err instanceof Error ? err.message : 'Unexpected error',
@@ -336,7 +439,263 @@ export class ReccomendationService {
     }
   }
 
-  async Update() {}
+  async UpdateReccomendation(
+    reccomendationId: string,
+    req: UpdateReccomendationDto,
+  ): Promise<Record<string, IReccomendation | IReccomendation[]>> {
+    try {
+      if (!reccomendationId) {
+        const foundReccomendations = await this.reccomendationRepository.find({
+          where: {
+            id: In(req.reccomendationIds),
+          },
+        });
 
-  async Delete() {}
+        if (!foundReccomendations.length) {
+          throw new NotFoundException('Reccomendation not found');
+        }
+
+        const mappedReccomendations = foundReccomendations.map(
+          (reccomendation, index) => ({
+            ...reccomendation,
+            lecturerId: req.lecturerIds[index],
+            studentId: req.studentIds[index],
+          }),
+        );
+
+        const updated = await this.reccomendationRepository.save(
+          mappedReccomendations,
+        );
+
+        return {
+          data: updated.map((data, index) =>
+            UpdateReccomendationDto.toResponse({
+              id: req.reccomendationIds[index] as Uuid,
+              createdAt: data.createdAt,
+              updatedAt: data.updatedAt,
+              deletedAt: data.deletedAt,
+            }),
+          ) as unknown as IReccomendation[],
+        };
+      } else {
+        const foundReccomendation = await this.reccomendationRepository.findOne(
+          { where: { id: reccomendationId as Uuid } },
+        );
+        if (!foundReccomendation) {
+          throw new NotFoundException('Reccomendation not found');
+        }
+
+        foundReccomendation.lecturerId = req.lecturerIds[0] as Uuid;
+        foundReccomendation.studentId = req.studentIds[0] as Uuid;
+
+        const updated =
+          await this.reccomendationRepository.save(foundReccomendation);
+
+        return {
+          data: UpdateReccomendationDto.toResponse({
+            id: updated.id,
+            createdAt: updated.createdAt,
+            updatedAt: updated.updatedAt,
+            deletedAt: updated.deletedAt,
+          }) as unknown as IReccomendation,
+        };
+      }
+    } catch (err: unknown) {
+      if (err instanceof InternalServerErrorException)
+        throw new InternalServerErrorException(
+          err instanceof Error ? err.message : 'Unexpected error',
+        );
+
+      throw err;
+    }
+  }
+
+  async DeleteNormalizationMatrix(
+    normalizationMatrixId: string,
+    req: DeleteNormalizedMatrix,
+  ): Promise<Record<string, INormalizedMatrices | INormalizedMatrices[]>> {
+    try {
+      if (
+        Array.isArray(req.normalizedMatrixIds) &&
+        req.normalizedMatrixIds.length > 0
+      ) {
+        const foundNormalizedMatrices =
+          await this.normalizedMatrixRepository.find({
+            where: {
+              id: In(req.normalizedMatrixIds),
+            },
+          });
+        if (!foundNormalizedMatrices.length) {
+          throw new NotFoundException('Reccomendation not found');
+        }
+
+        await this.normalizedMatrixRepository.delete(req.normalizedMatrixIds);
+
+        return {
+          data: foundNormalizedMatrices.map((data, index) =>
+            UpdateReccomendationDto.toResponse({
+              id: req.normalizedMatrixIds[index] as Uuid,
+              createdAt: data.createdAt,
+              updatedAt: data.updatedAt,
+              deletedAt: data.deletedAt,
+            }),
+          ) as unknown as INormalizedMatrices[],
+        };
+      } else {
+        const foundNormalizedMatrix =
+          await this.normalizedMatrixRepository.findOne({
+            where: {
+              id: normalizationMatrixId as Uuid,
+            },
+          });
+        if (!foundNormalizedMatrix) {
+          throw new NotFoundException('Reccomendation not found');
+        }
+
+        await this.normalizedMatrixRepository.delete(normalizationMatrixId);
+
+        return {
+          data: UpdateReccomendationDto.toResponse({
+            id: foundNormalizedMatrix.id,
+            createdAt: foundNormalizedMatrix.createdAt,
+            updatedAt: foundNormalizedMatrix.updatedAt,
+            deletedAt: foundNormalizedMatrix.deletedAt,
+          }) as unknown as INormalizedMatrices,
+        };
+      }
+    } catch (err: unknown) {
+      if (err instanceof InternalServerErrorException)
+        throw new InternalServerErrorException(
+          err instanceof Error ? err.message : 'Unexpected error',
+        );
+
+      throw err;
+    }
+  }
+
+  async DeleteRankingMatrix(
+    rankingMatrixId: string,
+    req: DeleteRankingMatrix,
+  ): Promise<Record<string, IRankingMatrices | IRankingMatrices[]>> {
+    try {
+      if (
+        Array.isArray(req.rankingMatrixIds) &&
+        req.rankingMatrixIds.length > 0
+      ) {
+        const foundRankingMatrices = await this.rankingMatricesRepository.find({
+          where: {
+            id: In(req.rankingMatrixIds),
+          },
+        });
+        if (!foundRankingMatrices.length) {
+          throw new NotFoundException('Reccomendation not found');
+        }
+
+        await this.rankingMatricesRepository.delete(req.rankingMatrixIds);
+
+        return {
+          data: foundRankingMatrices.map((data, index) =>
+            UpdateReccomendationDto.toResponse({
+              id: req.rankingMatrixIds[index] as Uuid,
+              createdAt: data.createdAt,
+              updatedAt: data.updatedAt,
+              deletedAt: data.deletedAt,
+            }),
+          ) as unknown as IRankingMatrices[],
+        };
+      } else {
+        const foundRankingMatrix = await this.rankingMatricesRepository.findOne(
+          {
+            where: {
+              id: rankingMatrixId as Uuid,
+            },
+          },
+        );
+        if (!foundRankingMatrix) {
+          throw new NotFoundException('Reccomendation not found');
+        }
+
+        await this.rankingMatricesRepository.delete(rankingMatrixId);
+
+        return {
+          data: UpdateReccomendationDto.toResponse({
+            id: foundRankingMatrix.id,
+            createdAt: foundRankingMatrix.createdAt,
+            updatedAt: foundRankingMatrix.updatedAt,
+            deletedAt: foundRankingMatrix.deletedAt,
+          }) as unknown as IRankingMatrices,
+        };
+      }
+    } catch (err: unknown) {
+      if (err instanceof InternalServerErrorException)
+        throw new InternalServerErrorException(
+          err instanceof Error ? err.message : 'Unexpected error',
+        );
+
+      throw err;
+    }
+  }
+
+  async DeleteReccomendation(
+    reccomendationId: string,
+    req: DeleteReccomendationDto,
+  ): Promise<Record<string, IReccomendation | IReccomendation[]>> {
+    try {
+      if (
+        Array.isArray(req.reccomendationIds) &&
+        req.reccomendationIds.length > 0
+      ) {
+        const foundReccomendations = await this.reccomendationRepository.find({
+          where: {
+            id: In(req.reccomendationIds),
+          },
+        });
+        if (!foundReccomendations.length) {
+          throw new NotFoundException('Reccomendation not found');
+        }
+
+        await this.reccomendationRepository.delete(req.reccomendationIds);
+
+        return {
+          data: foundReccomendations.map((data, index) =>
+            UpdateReccomendationDto.toResponse({
+              id: req.reccomendationIds[index] as Uuid,
+              createdAt: data.createdAt,
+              updatedAt: data.updatedAt,
+              deletedAt: data.deletedAt,
+            }),
+          ) as unknown as IReccomendation[],
+        };
+      } else {
+        const foundReccomendation = await this.reccomendationRepository.findOne(
+          {
+            where: {
+              id: reccomendationId as Uuid,
+            },
+          },
+        );
+        if (!foundReccomendation) {
+          throw new NotFoundException('Reccomendation not found');
+        }
+
+        await this.reccomendationRepository.delete(reccomendationId);
+
+        return {
+          data: UpdateReccomendationDto.toResponse({
+            id: foundReccomendation.id,
+            createdAt: foundReccomendation.createdAt,
+            updatedAt: foundReccomendation.updatedAt,
+            deletedAt: foundReccomendation.deletedAt,
+          }) as unknown as IReccomendation,
+        };
+      }
+    } catch (err: unknown) {
+      if (err instanceof InternalServerErrorException)
+        throw new InternalServerErrorException(
+          err instanceof Error ? err.message : 'Unexpected error',
+        );
+
+      throw err;
+    }
+  }
 }

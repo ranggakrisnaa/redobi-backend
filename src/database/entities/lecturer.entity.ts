@@ -39,7 +39,12 @@ export class LecturerEntity extends AbstractEntity implements ILecturer {
   @Column({ type: 'int', name: 'jumlah_bimbingan' })
   jumlahBimbingan: number;
 
-  @Column({ type: 'enum', enum: TipePembimbingEnum, name: 'tipe_pembimbing' })
+  @Column({
+    type: 'enum',
+    enum: TipePembimbingEnum,
+    name: 'tipe_pembimbing',
+    nullable: true,
+  })
   tipePembimbing: TipePembimbingEnum;
 
   @Column({ type: 'enum', enum: ProdiEnum, name: 'prodi' })
