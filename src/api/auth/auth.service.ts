@@ -1,7 +1,6 @@
 import { RefreshReqDto } from '@/api/auth/dto/refresh.dto';
 import { RegisterDto } from '@/api/auth/dto/register.dto';
 import { ResendOtpDto } from '@/api/auth/dto/resend-otp.dto';
-import { ResendOtpResponse } from '@/api/auth/types/resend-otp-response.type';
 import { UserRepository } from '@/api/user/user.repository';
 import { IEmailJob, IVerifyEmailJob } from '@/common/interfaces/job.interface';
 import { Token, Uuid } from '@/common/types/common.type';
@@ -44,7 +43,7 @@ export class AuthService {
     private readonly emailQueue: Queue<IEmailJob, any, string>,
   ) {}
 
-  async SignUp(reqBody: LoginReqDto): Promise<Partial<IUser>> {
+  async SignUp(reqBody: LoginReqDto): Promise<Record<string, Partial<IUser>>> {
     const foundUser = await this.userRepository.findOneBy({
       email: reqBody.email,
     });
@@ -53,14 +52,13 @@ export class AuthService {
     }
 
     try {
-      const newUser = this.userRepository.create({
+      const user = await this.userRepository.save({
         ...reqBody,
         password: await hashPassword(reqBody.password),
         imageUrl: DEFAULT.IMAGE_DEFAULT,
       });
-      const user = await this.userRepository.save(newUser);
 
-      return RegisterDto.toPlainUser(user);
+      return { data: RegisterDto.toResponse(user) };
     } catch (err: unknown) {
       if (err instanceof InternalServerErrorException)
         throw new InternalServerErrorException(
@@ -71,7 +69,7 @@ export class AuthService {
     }
   }
 
-  async SignIn(reqBody: LoginReqDto): Promise<SignInResponse> {
+  async SignIn(reqBody: LoginReqDto): Promise<Record<string, SignInResponse>> {
     const foundUser = await this.userRepository.findOneBy({
       email: reqBody.email,
     });
@@ -125,7 +123,7 @@ export class AuthService {
         { attempts: 3, backoff: { type: 'exponential', delay: 60000 } },
       );
 
-      return { id: foundUser.id, otpCode, email: foundUser.email };
+      return { data: { id: foundUser.id, otpCode, email: foundUser.email } };
     } catch (err: unknown) {
       await queryRunner.rollbackTransaction();
       if (err instanceof InternalServerErrorException)
@@ -139,7 +137,9 @@ export class AuthService {
     }
   }
 
-  async VerifySignIn(reqBody: VerifyLoginReqDto): Promise<Token> {
+  async VerifySignIn(
+    reqBody: VerifyLoginReqDto,
+  ): Promise<Record<string, Token>> {
     const foundSession = await this.sessionRepository.findOne({
       where: { userId: reqBody.userId as Uuid },
     });
@@ -161,7 +161,7 @@ export class AuthService {
         accessToken: token.accessToken,
       });
 
-      return token;
+      return { data: token };
     } catch (err: unknown) {
       if (err instanceof InternalServerErrorException)
         throw new InternalServerErrorException(
@@ -310,7 +310,7 @@ export class AuthService {
     } as Token;
   }
 
-  async RefreshToken(req: RefreshReqDto): Promise<Token> {
+  async RefreshToken(req: RefreshReqDto): Promise<Record<string, Token>> {
     const verifyToken = await this.jwtService.verifyAsync(req.refreshToken, {
       secret: this.configService.getOrThrow('auth.refreshSecret', {
         infer: true,
@@ -335,10 +335,10 @@ export class AuthService {
       accessToken: token.accessToken,
     });
 
-    return token;
+    return { data: token };
   }
 
-  async ResendOTP(req: ResendOtpDto): Promise<ResendOtpResponse> {
+  async ResendOTP(req: ResendOtpDto): Promise<Record<string, any>> {
     const [foundUser, foundSession] = await Promise.all([
       this.userRepository.findOne({
         where: {
@@ -374,7 +374,7 @@ export class AuthService {
         { attempts: 3, backoff: { type: 'exponential', delay: 60000 } },
       );
 
-      return { id: foundUser.id as Uuid, otpCode };
+      return { data: { id: foundUser.id as Uuid, otpCode } };
     } catch (err: unknown) {
       throw new InternalServerErrorException(
         err instanceof Error ? err.message : 'Unexpected error',
@@ -382,7 +382,7 @@ export class AuthService {
     }
   }
 
-  async Logout(userId: string): Promise<Partial<ISession>> {
+  async Logout(userId: string): Promise<Record<string, ISession>> {
     const foundSession = await this.sessionRepository.findOneBy({
       userId: userId as Uuid,
     });
@@ -393,7 +393,7 @@ export class AuthService {
       await this.sessionRepository.update(foundSession.id, {
         refreshToken: INITIAL_VALUE.STRING,
       });
-      return LogoutResDto.toPlainLogout(foundSession);
+      return { data: LogoutResDto.toPlainLogout(foundSession) as ISession };
     } catch (err: unknown) {
       if (err instanceof InternalServerErrorException)
         throw new InternalServerErrorException(

@@ -28,7 +28,9 @@ export class AuthController {
     summary: 'Sign up',
   })
   @Post('register')
-  async SignUp(@Body() req: RegisterDto): Promise<Partial<IUser>> {
+  async SignUp(
+    @Body() req: RegisterDto,
+  ): Promise<Record<string, Partial<IUser>>> {
     return await this.authService.SignUp(req);
   }
 
@@ -37,7 +39,9 @@ export class AuthController {
     summary: 'Sign in',
   })
   @Post('login')
-  async SignIn(@Body() req: LoginReqDto): Promise<SignInResponse> {
+  async SignIn(
+    @Body() req: LoginReqDto,
+  ): Promise<Record<string, SignInResponse>> {
     return await this.authService.SignIn(req);
   }
 
@@ -46,7 +50,9 @@ export class AuthController {
     summary: 'Verify Sign in',
   })
   @Post('verify-login')
-  async VerifySignIn(@Body() req: VerifyLoginReqDto): Promise<Token> {
+  async VerifySignIn(
+    @Body() req: VerifyLoginReqDto,
+  ): Promise<Record<string, Token>> {
     return await this.authService.VerifySignIn(req);
   }
 
@@ -55,7 +61,7 @@ export class AuthController {
     summary: 'Verify Sign in',
   })
   @Post('/resend')
-  async ResendOTP(@Body() req: ResendOtpDto) {
+  async ResendOTP(@Body() req: ResendOtpDto): Promise<Record<string, any>> {
     return await this.authService.ResendOTP(req);
   }
 
@@ -65,7 +71,9 @@ export class AuthController {
   })
   @Post('refresh')
   @UseGuards(AuthGuard)
-  async RefreshToken(@Body() req: RefreshReqDto): Promise<Token> {
+  async RefreshToken(
+    @Body() req: RefreshReqDto,
+  ): Promise<Record<string, Token>> {
     return await this.authService.RefreshToken(req);
   }
 
@@ -74,7 +82,7 @@ export class AuthController {
   @UseGuards(AuthGuard)
   async Logout(
     @CurrentUser() userToken: JwtPayloadType,
-  ): Promise<Partial<ISession>> {
+  ): Promise<Record<string, ISession>> {
     return await this.authService.Logout(userToken.id);
   }
 }

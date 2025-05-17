@@ -1,5 +1,4 @@
 import { Uuid } from '@/common/types/common.type';
-import { IUser } from '@/database/interface-model/user-entity.interface';
 import {
   EmailField,
   PasswordField,
@@ -26,7 +25,7 @@ export class RegisterDto {
   @PasswordField()
   password: string;
 
-  static toPlainUser(data: RegisterDto): Partial<IUser> {
+  static toResponse(data: Partial<RegisterDto>) {
     return {
       id: data.id,
       createdAt: data.createdAt,
