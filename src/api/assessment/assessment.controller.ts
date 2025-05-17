@@ -1,6 +1,7 @@
 import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
 import { IAssessment } from '@/database/interface-model/assessment-entity.interface';
 import { ApiAuth } from '@/decorators/http.decorators';
+import { AuthGuard } from '@/guards/auth.guard';
 import {
   Body,
   Controller,
@@ -10,6 +11,7 @@ import {
   Post,
   Put,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { AssessmentService } from './assessment.service';
@@ -23,6 +25,7 @@ import { UpdateAssessmentDto } from './dto/update.dto';
   path: 'assessments',
   version: '1',
 })
+@UseGuards(AuthGuard)
 export class AssessmentController {
   constructor(private readonly assessmentService: AssessmentService) {}
 

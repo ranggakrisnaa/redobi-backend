@@ -2,6 +2,7 @@ import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto
 import { ILecturer } from '@/database/interface-model/lecturer-entity.interface';
 import { CurrentUser } from '@/decorators/current-user.decorator';
 import { ApiAuth } from '@/decorators/http.decorators';
+import { AuthGuard } from '@/guards/auth.guard';
 import {
   Body,
   Controller,
@@ -14,6 +15,7 @@ import {
   Query,
   Res,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -32,7 +34,7 @@ import { LecturerService } from './lecturer.service';
   path: 'lecturers',
   version: '1',
 })
-// @UseGuards(AuthGuard)
+@UseGuards(AuthGuard)
 export class LecturerController {
   constructor(private readonly lecturerService: LecturerService) {}
 

@@ -1,6 +1,7 @@
 import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
 import { ICriteria } from '@/database/interface-model/criteria-entity.interface';
 import { ApiAuth } from '@/decorators/http.decorators';
+import { AuthGuard } from '@/guards/auth.guard';
 import {
   Body,
   Controller,
@@ -10,6 +11,7 @@ import {
   Post,
   Put,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { CriteriaService } from './criteria.service';
@@ -23,8 +25,7 @@ import { UpdateCriteriaDto } from './dto/update.dto';
   path: 'criteria',
   version: '1',
 })
-// TODO: "Activated this if usage"
-// @UseGuards(AuthGuard)
+@UseGuards(AuthGuard)
 export class CriteriaController {
   constructor(private readonly criteriaService: CriteriaService) {}
 
