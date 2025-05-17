@@ -1,6 +1,7 @@
 import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
 import { IThesisKeyword } from '@/database/interface-model/thesis-keyword-entity.interface';
 import { ApiAuth } from '@/decorators/http.decorators';
+import { AuthGuard } from '@/guards/auth.guard';
 import {
   Body,
   Controller,
@@ -10,6 +11,7 @@ import {
   Post,
   Put,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { CreateThesisKeywordDto } from './dto/create.dto';
@@ -23,6 +25,7 @@ import { ThesisKeywordService } from './thesis-keyword.service';
   path: 'thesis-keywords',
   version: '1',
 })
+@UseGuards(AuthGuard)
 export class ThesisKeywordController {
   constructor(private readonly thesisKeywordService: ThesisKeywordService) {}
 

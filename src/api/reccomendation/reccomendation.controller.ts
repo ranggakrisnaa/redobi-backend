@@ -3,6 +3,7 @@ import { INormalizedMatrices } from '@/database/interface-model/normalized-matri
 import { IRankingMatrices } from '@/database/interface-model/ranking-matrices-entity.interface';
 import { IReccomendation } from '@/database/interface-model/reccomendation-entity.interface';
 import { ApiAuth } from '@/decorators/http.decorators';
+import { AuthGuard } from '@/guards/auth.guard';
 import {
   Body,
   Controller,
@@ -12,6 +13,7 @@ import {
   Post,
   Put,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { DeleteNormalizedMatrix } from '../normalized-matrix/dto/delete.dto';
@@ -26,6 +28,7 @@ import { ReccomendationService } from './reccomendation.service';
   path: 'reccomendations',
   version: '1',
 })
+@UseGuards(AuthGuard)
 export class ReccomendationController {
   constructor(private readonly reccomendationService: ReccomendationService) {}
 
