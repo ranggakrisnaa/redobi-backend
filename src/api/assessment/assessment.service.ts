@@ -50,9 +50,11 @@ export class AssessmentService {
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
+    const subCriteriaIds = req.scores.map((score) => score.subCriteriaId);
+
     const [foundSubCriteria, foundLecturer] = await Promise.all([
       this.subCriteriaRepository.find({
-        where: { id: In(req.subCriteriaIds) },
+        where: { id: In(subCriteriaIds) },
         select: ['id'],
       }),
       this.lecturerRepository.findOne({
@@ -67,17 +69,11 @@ export class AssessmentService {
       throw new NotFoundException('Lecturer data not found');
     }
 
-    if (foundSubCriteria.length !== req.scores.length) {
-      throw new BadRequestException(
-        'Score length must be equal to sub criteria length',
-      );
-    }
-
     const existingAssessments = await this.assessmentRepository.find({
       where: {
         lecturerId: foundLecturer.id,
         assessmentSubCriteria: {
-          subCriteriaId: In(req.subCriteriaIds as unknown as number[]),
+          subCriteriaId: In(subCriteriaIds),
         },
       },
     });
@@ -93,17 +89,15 @@ export class AssessmentService {
           foundLecturer.id,
         );
 
-      const newAssessmentsSubCriteria = foundSubCriteria.map(
-        (subCriteria, index) => ({
-          subCriteriaId: subCriteria.id,
-          score: req.scores[index],
-          assessmentId: newAssessment.id,
-        }),
-      );
+      const newAssessmentsSubCriteria = req.scores.map((score) => ({
+        subCriteriaId: score.subCriteriaId,
+        score: score.score,
+        assessmentId: newAssessment.id,
+      }));
 
       await this.assessmentSubCriteriaRepository.createtWithTransaction(
         queryRunner,
-        newAssessmentsSubCriteria as IAssessmentSubCriteria[],
+        newAssessmentsSubCriteria as unknown as IAssessmentSubCriteria[],
       );
 
       await queryRunner.commitTransaction();
@@ -135,27 +129,37 @@ export class AssessmentService {
     if (!foundAssessment || foundAssessment.assessmentSubCriteria.length < 1) {
       throw new NotFoundException('Assessment data not found');
     }
-    if (
-      foundAssessment.assessmentSubCriteria.map((data) => data.subCriteria)
-        .length !== req.scores.length
-    ) {
-      throw new BadRequestException(
-        'Score length must be equal to sub criteria length',
-      );
-    }
 
     try {
-      const updateAssessmentSubCriteria =
-        foundAssessment.assessmentSubCriteria.map((subCriteria, index) => ({
-          id: subCriteria.id,
-          subCriteriaId: subCriteria.subCriteriaId,
-          assessmentId: foundAssessment.id,
-          score: req.scores[index],
-        }));
-
-      await this.assessmentSubCriteriaRepository.save(
-        updateAssessmentSubCriteria,
+      const existingAssessmentSub = foundAssessment.assessmentSubCriteria.map(
+        (assSub) => assSub.id,
       );
+      const receivedAssessmentSub = req.scores.map(
+        (scores) => scores.assessmentSubCriteriaId,
+      );
+      const toDelete = existingAssessmentSub.filter(
+        (assSubId) => !receivedAssessmentSub.includes(assSubId),
+      );
+      if (toDelete.length > 0) {
+        await this.subCriteriaRepository.delete(toDelete);
+      }
+
+      for (const score of req.scores) {
+        if (
+          score.assessmentSubCriteriaId &&
+          existingAssessmentSub.includes(score.assessmentSubCriteriaId)
+        ) {
+          await this.assessmentSubCriteriaRepository.update(
+            score.assessmentSubCriteriaId,
+            {
+              subCriteriaId: score.subCriteriaId,
+              score: score.score,
+            },
+          );
+        } else {
+          await this.assessmentSubCriteriaRepository.save(score);
+        }
+      }
 
       return {
         data: CreateAssessmentDto.toResponse(foundAssessment) as IAssessment,

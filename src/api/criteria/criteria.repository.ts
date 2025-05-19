@@ -21,23 +21,10 @@ export class CriteriaRepository extends Repository<CriteriaEntity> {
   ): Promise<OffsetPaginatedDto<ICriteria>> {
     const targetName = this.repo.metadata.targetName;
 
-    const idQuery = this.createQueryBuilder(targetName).select(
-      `${targetName}.id`,
-    );
-
-    this.applyFilters(idQuery, reqQuery, targetName);
-
-    const sortField = [
-      { name: 'name', alias: `${targetName}.name` },
-      { name: 'created_at', alias: `${targetName}.createdAt` },
-    ].find((sort) => sort.name === reqQuery.sort);
-    if (sortField) {
-      idQuery.orderBy(sortField.alias, reqQuery.order as OrderDirectionEnum);
-    } else {
-      idQuery.orderBy(`${targetName}.createdAt`, OrderDirectionEnum.Asc);
-    }
-
-    idQuery.limit(reqQuery.limit).offset(reqQuery.offset);
+    const idQuery = this.createQueryBuilder(targetName)
+      .select(`${targetName}.id`)
+      .limit(reqQuery.limit)
+      .offset(reqQuery.offset);
 
     const ids = await idQuery.getRawMany();
     const criteriaIds = ids.map((row) => row[`${targetName}_id`]);
@@ -46,6 +33,12 @@ export class CriteriaRepository extends Repository<CriteriaEntity> {
       .leftJoinAndSelect(`${targetName}.subCriteria`, 'subCriteria')
       .whereInIds(criteriaIds);
 
+    this.applyFilters(criteriaQuery, reqQuery, targetName);
+
+    const sortField = [
+      { name: 'name', alias: `${targetName}.name` },
+      { name: 'created_at', alias: `${targetName}.createdAt` },
+    ].find((sort) => sort.name === reqQuery.sort);
     if (sortField) {
       criteriaQuery.orderBy(
         sortField.alias,
@@ -72,9 +65,10 @@ export class CriteriaRepository extends Repository<CriteriaEntity> {
     targetName: string,
   ) {
     if (req.search) {
-      query.where(`${targetName}.name ILIKE :search`, {
-        search: `%${req.search}%`,
-      });
+      query.andWhere(
+        `${targetName}.name ILIKE :search OR subCriteria.name ILIKE :search`,
+        { search: `%${req.search}%` },
+      );
     }
 
     if (req.type) {

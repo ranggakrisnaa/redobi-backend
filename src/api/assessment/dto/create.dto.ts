@@ -1,5 +1,15 @@
 import { Uuid } from '@/common/types/common.type';
 import { NumberField, StringField } from '@/decorators/field.decorators';
+import { Type } from 'class-transformer';
+import { ArrayMinSize, ValidateNested } from 'class-validator';
+
+class ScoreDto {
+  @NumberField()
+  subCriteriaId: number;
+
+  @NumberField()
+  score: number;
+}
 
 export class CreateAssessmentDto {
   id: Uuid;
@@ -10,11 +20,10 @@ export class CreateAssessmentDto {
   @StringField()
   lecturerId: string;
 
-  @NumberField({ each: true })
-  subCriteriaIds: number[];
-
-  @NumberField({ each: true })
-  scores: number[];
+  @ValidateNested({ each: true })
+  @ArrayMinSize(1, { message: 'At least 1 sub-criteria must be filled.' })
+  @Type(() => ScoreDto)
+  scores: ScoreDto[];
 
   static toResponse(dto: Partial<CreateAssessmentDto>) {
     return {

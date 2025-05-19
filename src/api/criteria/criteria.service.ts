@@ -113,8 +113,7 @@ export class CriteriaService {
           });
         } else {
           await this.subCriteriaRepository.save({
-            name: sub.name,
-            weight: sub.weight,
+            ...sub,
             criteriaId: updatedCriteria.id,
           });
         }
