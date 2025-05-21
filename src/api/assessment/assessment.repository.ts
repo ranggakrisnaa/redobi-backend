@@ -21,27 +21,36 @@ export class AssessmentRepository extends Repository<AssessmentEntity> {
     reqQuery: AssessmentPaginationReqQuery,
   ): Promise<OffsetPaginatedDto<IAssessment>> {
     const targetName = this.repo.metadata.targetName;
-    const query = this.createQueryBuilder(targetName)
+    const idQuery = this.createQueryBuilder(targetName).select(
+      `${targetName}.id`,
+    );
+
+    idQuery.limit(reqQuery.limit).offset(reqQuery.offset);
+
+    const ids = await idQuery.getRawMany();
+    const assessmentIds = ids.map((row) => row[`${targetName}_id`]);
+
+    const assessmentQuery = this.createQueryBuilder(targetName)
       .leftJoinAndSelect(`${targetName}.lecturer`, 'lecturer')
       .leftJoinAndSelect(
         `${targetName}.assessmentSubCriteria`,
         'assessmentSubCriteria',
-      );
+      )
+      .whereInIds(assessmentIds);
 
-    this.applyFilters(query, reqQuery, targetName);
+    this.applyFilters(idQuery, reqQuery, targetName);
+
     const sortField = [
       { name: 'name', alias: `${targetName}.name` },
       { name: 'created_at', alias: `${targetName}.createdAt` },
     ].find((sort) => sort.name === reqQuery.sort);
     if (sortField) {
-      query.orderBy(sortField.alias, reqQuery.order as OrderDirectionEnum);
+      idQuery.orderBy(sortField.alias, reqQuery.order as OrderDirectionEnum);
     } else {
-      query.orderBy(`${targetName}.createdAt`, OrderDirectionEnum.Asc);
+      idQuery.orderBy(`${targetName}.createdAt`, OrderDirectionEnum.Asc);
     }
 
-    query.limit(reqQuery.limit).offset(reqQuery.offset);
-
-    const [data, total] = await query.getManyAndCount();
+    const [data, total] = await assessmentQuery.getManyAndCount();
 
     const pagination = plainToInstance(
       OffsetPaginationDto,
