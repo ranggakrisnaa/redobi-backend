@@ -36,6 +36,8 @@ export class AssessmentRepository extends Repository<AssessmentEntity> {
         `${targetName}.assessmentSubCriteria`,
         'assessmentSubCriteria',
       )
+      .leftJoinAndSelect('assessmentSubCriteria.subCriteria', 'subCriteria')
+      .leftJoinAndSelect('subCriteria.criteria', 'criteria')
       .whereInIds(assessmentIds);
 
     this.applyFilters(idQuery, reqQuery, targetName);
