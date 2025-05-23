@@ -117,7 +117,6 @@ export class AssessmentService {
       await queryRunner.release();
     }
   }
-
   async Update(
     req: UpdateAssessmentDto,
     assessmentId: string,
@@ -126,6 +125,7 @@ export class AssessmentService {
       where: { id: assessmentId as Uuid },
       relations: ['assessmentSubCriteria'],
     });
+
     if (!foundAssessment || foundAssessment.assessmentSubCriteria.length < 1) {
       throw new NotFoundException('Assessment data not found');
     }
@@ -134,43 +134,33 @@ export class AssessmentService {
       const existingAssessmentSub = foundAssessment.assessmentSubCriteria.map(
         (assSub) => assSub.id,
       );
-      const receivedAssessmentSub = req.scores.map(
-        (scores) => scores.assessmentSubCriteriaId,
-      );
-      const toDelete = existingAssessmentSub.filter(
-        (assSubId) => !receivedAssessmentSub.includes(assSubId),
-      );
-      if (toDelete.length > 0) {
-        await this.subCriteriaRepository.delete(toDelete);
-      }
 
-      for (const score of req.scores) {
-        if (
-          score.assessmentSubCriteriaId &&
-          existingAssessmentSub.includes(score.assessmentSubCriteriaId)
-        ) {
-          await this.assessmentSubCriteriaRepository.update(
-            score.assessmentSubCriteriaId,
-            {
-              subCriteriaId: score.subCriteriaId,
-              score: score.score,
-            },
-          );
-        } else {
-          await this.assessmentSubCriteriaRepository.save(score);
-        }
-      }
+      await Promise.all(
+        req.scores.map(async (score) => {
+          if (
+            score.assessmentSubCriteriaId &&
+            existingAssessmentSub.includes(score.assessmentSubCriteriaId)
+          ) {
+            await this.assessmentSubCriteriaRepository.update(
+              score.assessmentSubCriteriaId,
+              {
+                subCriteriaId: score.subCriteriaId,
+                score: score.score,
+              },
+            );
+          } else {
+            await this.assessmentSubCriteriaRepository.save(score);
+          }
+        }),
+      );
 
       return {
         data: CreateAssessmentDto.toResponse(foundAssessment) as IAssessment,
       };
     } catch (err: unknown) {
-      if (err instanceof InternalServerErrorException)
-        throw new InternalServerErrorException(
-          err instanceof Error ? err.message : 'Unexpected error',
-        );
-
-      throw err;
+      throw new InternalServerErrorException(
+        err instanceof Error ? err.message : 'Unexpected error',
+      );
     }
   }
 
