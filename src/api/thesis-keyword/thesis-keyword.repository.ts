@@ -20,9 +20,10 @@ export class ThesisKeywordRepository extends Repository<ThesisKeywordsEntity> {
     reqQuery: ThesisKeywordReqQuery,
   ): Promise<OffsetPaginatedDto<IThesisKeyword>> {
     const targetName = this.repo.metadata.targetName;
-    const query = this.repo
-      .createQueryBuilder(targetName)
-      .leftJoinAndSelect(`${targetName}.keyword`, 'keyword');
+    const query = this.createQueryBuilder(targetName).leftJoinAndSelect(
+      `${targetName}.keyword`,
+      'keyword',
+    );
 
     this.applyFilters(query, reqQuery, targetName);
 
@@ -55,10 +56,24 @@ export class ThesisKeywordRepository extends Repository<ThesisKeywordsEntity> {
   }
 
   private applyFilters(
-    _query: SelectQueryBuilder<ThesisKeywordsEntity>,
-    _req: ThesisKeywordReqQuery,
-    _targetName: string,
-  ) {}
+    query: SelectQueryBuilder<ThesisKeywordsEntity>,
+    req: ThesisKeywordReqQuery,
+    targetName: string,
+  ) {
+    if (req.search) {
+      query.andWhere('keyword.name ILIKE :search', {
+        search: `%${req.search}%`,
+      });
+    }
+
+    if (req.category) {
+      query.andWhere(`${targetName}.category = :category`, {
+        category: req.category,
+      });
+    }
+
+    return query;
+  }
 
   createWithTransaction(
     queryRunner: QueryRunner,

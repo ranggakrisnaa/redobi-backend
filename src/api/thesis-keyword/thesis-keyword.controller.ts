@@ -77,7 +77,7 @@ export class ThesisKeywordController {
   @ApiAuth({
     summary: 'Pagination Thesis Keyword',
   })
-  @Delete(':thesisKeywordId')
+  @Delete(':thesisKeywordId?')
   async Delete(
     @Param('thesisKeywordId') thesisKeywordId: string,
     @Body() req: DeleteThesisKeywordDto,

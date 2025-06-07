@@ -82,11 +82,13 @@ export class CriteriaService {
       where: { id: criteriaId },
       relations: ['subCriteria'],
     });
+
     if (!foundCriteria) {
       throw new NotFoundException('Criteria not found');
     }
 
     try {
+      // Update kriteria utama
       const updatedCriteria = await this.criteriaRepository.save({
         ...foundCriteria,
         name: req.name,
@@ -97,35 +99,31 @@ export class CriteriaService {
       const existingSubCriteriaIds = foundCriteria.subCriteria.map(
         (sc) => sc.id,
       );
-      const receivedSubCriteriaIds = req.subCriteria.map((sc) => sc.id);
-      const toDelete = existingSubCriteriaIds.filter(
-        (id) => !receivedSubCriteriaIds.includes(id),
+
+      // Update atau tambah sub-kriteria secara paralel
+      await Promise.all(
+        req.subCriteria.map(async (sub) => {
+          if (sub.id && existingSubCriteriaIds.includes(sub.id)) {
+            await this.subCriteriaRepository.update(sub.id, {
+              name: sub.name,
+              weight: sub.weight,
+            });
+          } else {
+            await this.subCriteriaRepository.save({
+              ...sub,
+              criteriaId: updatedCriteria.id,
+            });
+          }
+        }),
       );
-      if (toDelete.length > 0) {
-        await this.subCriteriaRepository.delete(toDelete);
-      }
 
-      for (const sub of req.subCriteria) {
-        if (sub.id && existingSubCriteriaIds.includes(sub.id)) {
-          await this.subCriteriaRepository.update(sub.id, {
-            name: sub.name,
-            weight: sub.weight,
-          });
-        } else {
-          await this.subCriteriaRepository.save({
-            ...sub,
-            criteriaId: updatedCriteria.id,
-          });
-        }
-      }
-      return { data: CreateCriteriaDto.toResponse(foundCriteria) as ICriteria };
+      return {
+        data: CreateCriteriaDto.toResponse(updatedCriteria) as ICriteria,
+      };
     } catch (err: unknown) {
-      if (err instanceof InternalServerErrorException)
-        throw new InternalServerErrorException(
-          err instanceof Error ? err.message : 'Unexpected error',
-        );
-
-      throw err;
+      throw new InternalServerErrorException(
+        err instanceof Error ? err.message : 'Unexpected error',
+      );
     }
   }
 

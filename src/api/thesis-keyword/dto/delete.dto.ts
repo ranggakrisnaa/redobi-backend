@@ -1,6 +1,6 @@
-import { StringFieldOptional } from '@/decorators/field.decorators';
+import { NumberFieldOptional } from '@/decorators/field.decorators';
 
 export class DeleteThesisKeywordDto {
-  @StringFieldOptional({ each: true })
-  thesisKeywordIds: string[];
+  @NumberFieldOptional({ each: true })
+  thesisKeywordIds: number[];
 }

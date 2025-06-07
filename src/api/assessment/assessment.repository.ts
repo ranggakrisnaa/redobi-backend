@@ -21,9 +21,11 @@ export class AssessmentRepository extends Repository<AssessmentEntity> {
     reqQuery: AssessmentPaginationReqQuery,
   ): Promise<OffsetPaginatedDto<IAssessment>> {
     const targetName = this.repo.metadata.targetName;
-    const idQuery = this.createQueryBuilder(targetName).select(
-      `${targetName}.id`,
-    );
+    const idQuery = this.createQueryBuilder(targetName)
+      .select(`${targetName}.id`)
+      .leftJoin(`${targetName}.lecturer`, 'lecturer');
+
+    this.applyFilters(idQuery, reqQuery, targetName);
 
     idQuery.limit(reqQuery.limit).offset(reqQuery.offset);
 
@@ -40,10 +42,8 @@ export class AssessmentRepository extends Repository<AssessmentEntity> {
       .leftJoinAndSelect('subCriteria.criteria', 'criteria')
       .whereInIds(assessmentIds);
 
-    this.applyFilters(idQuery, reqQuery, targetName);
-
     const sortField = [
-      { name: 'name', alias: `${targetName}.name` },
+      { name: 'lecturerName', alias: `lecturer.full_name` },
       { name: 'created_at', alias: `${targetName}.createdAt` },
     ].find((sort) => sort.name === reqQuery.sort);
     if (sortField) {
@@ -66,10 +66,11 @@ export class AssessmentRepository extends Repository<AssessmentEntity> {
   private applyFilters(
     query: SelectQueryBuilder<AssessmentEntity>,
     req: AssessmentPaginationReqQuery,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     targetName: string,
   ) {
     if (req.search) {
-      query.where(`${targetName}.name ILIKE :search`, {
+      query.where(`lecturer.full_name ILIKE :search`, {
         search: `%${req.search}%`,
       });
     }
