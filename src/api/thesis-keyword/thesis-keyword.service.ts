@@ -50,23 +50,25 @@ export class ThesisKeywordService {
   async Create(
     req: CreateThesisKeywordDto,
   ): Promise<Record<string, IThesisKeyword>> {
+    const foundThesisKeyword = await this.thesisKeywordRepository.findOne({
+      where: {
+        category: req.category as ThesisKeywordCategoryEnum,
+        keyword: {
+          name: In(req.names),
+        },
+      },
+      relations: ['keyword'],
+    });
+
+    if (foundThesisKeyword) {
+      throw new BadRequestException('Thesis keyword already exists');
+    }
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
-    try {
-      const foundThesisKeyword = await this.thesisKeywordRepository.findOne({
-        where: {
-          category: req.category as ThesisKeywordCategoryEnum,
-          keyword: {
-            name: In(req.names),
-          },
-        },
-        relations: ['keyword'],
-      });
-      if (foundThesisKeyword) {
-        throw new BadRequestException('Thesis keyword already exists');
-      }
 
+    try {
       const newThesisKeyword =
         await this.thesisKeywordRepository.createWithTransaction(queryRunner, {
           category: req.category,
@@ -76,6 +78,7 @@ export class ThesisKeywordService {
         name,
         thesisKeywordId: newThesisKeyword.id,
       }));
+
       await this.keywordRepository.createWithTransaction(
         queryRunner,
         entities as unknown as IKeyword[],
@@ -85,12 +88,11 @@ export class ThesisKeywordService {
 
       return {
         data: CreateThesisKeywordDto.toResponse(
-          foundThesisKeyword,
+          newThesisKeyword,
         ) as unknown as IThesisKeyword,
       };
     } catch (err: unknown) {
       await queryRunner.rollbackTransaction();
-
       throw new InternalServerErrorException(
         err instanceof Error ? err.message : 'Unexpected error',
       );
@@ -100,69 +102,52 @@ export class ThesisKeywordService {
   }
 
   async Update(
-    thesisKeywordId: number,
+    id: number,
     req: UpdateThesisKeywordDto,
-  ): Promise<Record<any, IThesisKeyword>> {
-    const foundThesisKeyword = await this.thesisKeywordRepository.findOne({
-      where: { id: thesisKeywordId },
-      relations: ['keyword'],
-    });
-    if (!foundThesisKeyword) {
-      throw new NotFoundException('Thesis keyword not found');
-    }
-
+  ): Promise<Record<string, IThesisKeyword>> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
+
     try {
-      await this.thesisKeywordRepository.updateWithTransaction(queryRunner, {
-        ...foundThesisKeyword,
-        ...req,
+      const thesisKeyword = await this.thesisKeywordRepository.findOne({
+        where: { id },
+        relations: ['keyword'],
       });
 
-      const existKeywordId = foundThesisKeyword.keyword.map((k) => k.id);
-      const receiveKeywordId = req.keywords.map((k) => k.id);
-      const toDelete = existKeywordId.filter(
-        (id) => !receiveKeywordId.includes(id.toString()),
-      );
-      if (toDelete.length > 0) {
-        await this.keywordRepository.delete(toDelete);
+      if (!thesisKeyword) {
+        throw new NotFoundException('Thesis keyword not found');
       }
 
-      for (const keywordData of req.keywords) {
-        if (keywordData.id) {
-          // Update existing keyword
-          await queryRunner.manager.update(
-            KeywordsEntity,
-            { id: keywordData.id },
-            {
-              name: keywordData.name,
-              thesisKeywordId: thesisKeywordId,
-            },
-          );
-        } else {
-          // Create new keyword
-          const newKeyword = this.keywordRepository.create({
-            name: keywordData.name,
-            thesisKeywordId: thesisKeywordId,
-          });
-          await queryRunner.manager.save(newKeyword);
-        }
+      if (req.category && req.category !== thesisKeyword.category) {
+        thesisKeyword.category = req.category;
+        await queryRunner.manager.save(thesisKeyword);
       }
+
+      if (req.names && req.names.length) {
+        await queryRunner.manager.delete(KeywordsEntity, {
+          thesisKeywordId: thesisKeyword.id,
+        });
+
+        const newKeywords = req.names.map((name) => ({
+          name,
+          thesisKeywordId: thesisKeyword.id,
+        }));
+        await queryRunner.manager.insert(KeywordsEntity, newKeywords);
+      }
+
       await queryRunner.commitTransaction();
 
       return {
-        data: CreateThesisKeywordDto.toResponse(
-          foundThesisKeyword,
-        ) as unknown as IThesisKeyword,
+        data: thesisKeyword as unknown as IThesisKeyword,
       };
     } catch (err: unknown) {
-      if (err instanceof InternalServerErrorException)
-        throw new InternalServerErrorException(
-          err instanceof Error ? err.message : 'Unexpected error',
-        );
-
-      throw err;
+      await queryRunner.rollbackTransaction();
+      throw new InternalServerErrorException(
+        err instanceof Error ? err.message : 'Unexpected error',
+      );
+    } finally {
+      await queryRunner.release();
     }
   }
 

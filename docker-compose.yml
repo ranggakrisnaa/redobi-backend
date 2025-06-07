@@ -8,7 +8,7 @@ services:
     env_file:
       - .env.docker
     ports:
-      - "3000:3000"
+      - '3000:3000'
     networks:
       - nestjs-boilerplate-network
 
@@ -22,9 +22,9 @@ services:
       POSTGRES_DB: nestjs_boilerplate
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      TZ: "UTC"
+      TZ: 'UTC'
     ports:
-      - "5432:5432"
+      - '5432:5432'
     networks:
       - nestjs-boilerplate-network
 
@@ -32,37 +32,21 @@ services:
     image: redis/redis-stack:latest
     restart: always
     ports:
-      - "6379:6379"
-      - "8001:8001"
+      - '6379:6379'
     volumes:
       - redis_data:/data
     healthcheck:
-      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
+      test: ['CMD', 'redis-cli', '--raw', 'incr', 'ping']
     environment:
-      REDIS_ARGS: "--requirepass redispass"
+      REDIS_ARGS: '--requirepass redispass'
     networks:
       - nestjs-boilerplate-network
 
   maildev:
     image: maildev/maildev:latest
     ports:
-      - "1080:1080"
-      - "1025:1025"
-    networks:
-      - nestjs-boilerplate-network
-
-  pgadmin:
-    container_name: pgadmin
-    image: dpage/pgadmin4
-    ports:
-      - "18080:80"
-    volumes:
-      - pgadmin_data:/root/.pgadmin
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@example.com
-      PGADMIN_DEFAULT_PASSWORD: 12345678
-      PGADMIN_CONFIG_WTF_CSRF_ENABLED: "False"
-      PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION: "False"
+      - '1080:1080'
+      - '1025:1025'
     networks:
       - nestjs-boilerplate-network
 

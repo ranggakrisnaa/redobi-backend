@@ -315,9 +315,7 @@ export class ReccomendationService {
   async CreateReccomendation(): Promise<Record<string, string>> {
     try {
       const [foundAllRankings, foundAllStudents] = await Promise.all([
-        this.rankingMatricesRepository.find({
-          relations: ['lecturer'],
-        }),
+        this.rankingMatricesRepository.find({ relations: ['lecturer'] }),
         this.studentRepository.find(),
       ]);
 
@@ -325,6 +323,7 @@ export class ReccomendationService {
         string,
         { studentId: string; major: string; value: number }
       >();
+
       for (const student of foundAllStudents) {
         const foundThesisKeyword = await this.thesisKeywordRepository.findOne({
           where: {
@@ -332,8 +331,8 @@ export class ReccomendationService {
           },
           relations: ['keyword'],
         });
-        const keywordArray = student.judulSkripsi.toLowerCase().split(' ');
 
+        const keywordArray = student.judulSkripsi.toLowerCase().split(' ');
         const filteredStudentThesisKeyword = keywordArray.filter(
           (key) =>
             foundThesisKeyword &&
@@ -359,52 +358,60 @@ export class ReccomendationService {
           rank: index + 1,
         }));
 
-      const filteredRanking = ranking.filter(
-        (value) =>
-          value.major == ThesisKeywordCategoryEnum.REKAYASA_PERANGKAT_LUNAK,
-      );
-
-      const numberOfLecturers = foundAllRankings.length;
-      const studentsPerLecturer = Math.ceil(
-        filteredRanking.length / numberOfLecturers,
-      );
-
       const pembimbingTypes = [
         TipePembimbingEnum.PEMBIMBING_SATU,
         TipePembimbingEnum.PEMBIMBING_DUA,
       ];
 
-      for (const student of filteredRanking) {
-        for (const tipePembimbing of pembimbingTypes) {
-          let isAssigned = false;
+      const majors = [
+        ThesisKeywordCategoryEnum.REKAYASA_PERANGKAT_LUNAK,
+        ThesisKeywordCategoryEnum.SISTEM_CERDAS,
+      ];
 
-          for (const lecturer of foundAllRankings.filter(
-            (data) => data.lecturer.tipePembimbing === tipePembimbing,
-          )) {
-            if (isAssigned) break;
+      for (const major of majors) {
+        const filteredRanking = ranking.filter(
+          (value) => value.major === major,
+        );
 
-            const currentLecturerStudentsCount =
-              await this.reccomendationRepository.count({
-                where: { lecturerId: lecturer.lecturer.id },
-              });
+        const lecturersForMajor = foundAllRankings;
 
-            if (currentLecturerStudentsCount < studentsPerLecturer) {
-              const existingRecommendation =
-                await this.reccomendationRepository.findOne({
-                  where: {
-                    studentId: student.studentId as Uuid,
+        const numberOfLecturers = lecturersForMajor.length;
+        const studentsPerLecturer = Math.ceil(
+          filteredRanking.length / numberOfLecturers,
+        );
+
+        for (const student of filteredRanking) {
+          for (const tipePembimbing of pembimbingTypes) {
+            let isAssigned = false;
+
+            for (const lecturer of lecturersForMajor.filter(
+              (data) => data.lecturer.tipePembimbing === tipePembimbing,
+            )) {
+              if (isAssigned) break;
+
+              const currentLecturerStudentsCount =
+                await this.reccomendationRepository.count({
+                  where: { lecturerId: lecturer.lecturer.id },
+                });
+
+              if (currentLecturerStudentsCount < studentsPerLecturer) {
+                const existingRecommendation =
+                  await this.reccomendationRepository.findOne({
+                    where: {
+                      studentId: student.studentId as Uuid,
+                      lecturerId: lecturer.lecturer.id,
+                    },
+                  });
+
+                if (!existingRecommendation) {
+                  await this.reccomendationRepository.save({
+                    studentId: student.studentId,
                     lecturerId: lecturer.lecturer.id,
-                  },
-                });
+                    reccomendationScore: lecturer.finalScore,
+                  });
 
-              if (!existingRecommendation) {
-                await this.reccomendationRepository.save({
-                  studentId: student.studentId,
-                  lecturerId: lecturer.lecturer.id,
-                  reccomendationScore: lecturer.finalScore,
-                });
-
-                isAssigned = true;
+                  isAssigned = true;
+                }
               }
             }
           }
@@ -417,7 +424,7 @@ export class ReccomendationService {
 
       for (const lecturerId of lecturerIds) {
         const actualStudentCount = await this.reccomendationRepository.count({
-          where: { lecturerId: lecturerId },
+          where: { lecturerId },
         });
 
         await this.lecturerRepository.update(lecturerId, {
@@ -426,7 +433,7 @@ export class ReccomendationService {
       }
 
       return {
-        message: 'Reccomendation created successfully.',
+        message: 'Recommendation created successfully for all majors.',
       };
     } catch (err: unknown) {
       console.log(err);

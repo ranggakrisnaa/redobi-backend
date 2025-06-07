@@ -34,11 +34,17 @@ export class AssessmentService {
     return await this.assessmentRepository.Pagination(reqQuery);
   }
 
-  async Detail(assesmentId: string): Promise<Record<string, IAssessment>> {
+  async Detail(assessmentId: string): Promise<Record<string, IAssessment>> {
     const foundAssessment = await this.assessmentRepository.findOne({
-      where: { id: assesmentId as Uuid },
-      relations: ['assessmentSubCriteria', 'lecturer'],
+      where: { id: assessmentId as Uuid },
+      relations: [
+        'assessmentSubCriteria',
+        'assessmentSubCriteria.subCriteria',
+        'assessmentSubCriteria.subCriteria.criteria',
+        'lecturer',
+      ],
     });
+
     if (!foundAssessment) {
       throw new NotFoundException('Assessment data not found');
     }
