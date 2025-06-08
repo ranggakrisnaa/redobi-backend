@@ -14,12 +14,12 @@ import { IAssessment } from '../interface-model/assessment-entity.interface';
 import { ILecturer } from '../interface-model/lecturer-entity.interface';
 import { INormalizedMatrices } from '../interface-model/normalized-matrices-entity.interface';
 import { IRankingMatrices } from '../interface-model/ranking-matrices-entity.interface';
-import { IReccomendation } from '../interface-model/reccomendation-entity.interface';
+import { IRecommendation } from '../interface-model/recommendation-entity.interface';
 import { AbstractEntity } from './abstract.entity';
 import { AssessmentEntity } from './assesment.entity';
 import { NormalizedMatricesEntity } from './normalized-matrices.entity';
 import { RankingMatricesEntity } from './ranking-matrix.entity';
-import { ReccomendationEntity } from './reccomendation.entity';
+import { RecommendationEntity } from './reccomendation.entity';
 import { SelectionEntity } from './selection.entity';
 import { UserEntity } from './user.entity';
 
@@ -74,10 +74,10 @@ export class LecturerEntity extends AbstractEntity implements ILecturer {
   selection?: Relation<SelectionEntity[]>;
 
   @OneToMany(
-    () => ReccomendationEntity,
-    (reccomendation) => reccomendation.lecturer,
+    () => RecommendationEntity,
+    (recommendation) => recommendation.lecturer,
   )
-  recomendation?: IReccomendation[];
+  recommendation?: IRecommendation[];
 
   @OneToMany(() => AssessmentEntity, (assessment) => assessment.lecturer)
   assessment?: IAssessment[];

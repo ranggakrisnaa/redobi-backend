@@ -1,12 +1,12 @@
 import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
-import { ReccomendationStageEnum } from '@/common/enums/reccomendation-stage.enum';
+import { RecommendationStageEnum } from '@/common/enums/recommendation-stage.enum';
 import { Uuid } from '@/common/types/common.type';
 import { CriteriaTypeEnum } from '@/database/enums/criteria-type.enum';
 import { ThesisKeywordCategoryEnum } from '@/database/enums/thesis-keyword-category.enum';
 import { TipePembimbingEnum } from '@/database/enums/tipe-pembimbing.enum';
 import { INormalizedMatrices } from '@/database/interface-model/normalized-matrices-entity.interface';
 import { IRankingMatrices } from '@/database/interface-model/ranking-matrices-entity.interface';
-import { IReccomendation } from '@/database/interface-model/reccomendation-entity.interface';
+import { IRecommendation } from '@/database/interface-model/recommendation-entity.interface';
 import {
   Injectable,
   InternalServerErrorException,
@@ -22,15 +22,15 @@ import { RankingMatricesRepository } from '../ranking-matrices/ranking-matrices.
 import { RankingNormalizedMatricesRepository } from '../ranking-normalized-matrices/ranking-normalized-matrices.repository';
 import { StudentRepository } from '../student/student.repository';
 import { ThesisKeywordRepository } from '../thesis-keyword/thesis-keyword.repository';
-import { DeleteReccomendationDto } from './dto/delete.dto';
-import { ReccomendationPaginationReqQuery } from './dto/query.dto';
-import { UpdateReccomendationDto } from './dto/update.dto';
-import { ReccomendationRepository } from './reccomendation.repository';
+import { DeleteRecommendationDto } from './dto/delete.dto';
+import { RecommendationPaginationReqQuery } from './dto/query.dto';
+import { UpdateRecommendationDto } from './dto/update.dto';
+import { RecommendationRepository } from './recommendation.repository';
 
 @Injectable()
-export class ReccomendationService {
+export class RecommendationService {
   constructor(
-    private readonly reccomendationRepository: ReccomendationRepository,
+    private readonly recommendationRepository: RecommendationRepository,
     private readonly assessmentRepository: AssessmentRepository,
     private readonly normalizedMatrixRepository: NormalizedMatrixRepository,
     private readonly rankingNormalizedMatricesRepository: RankingNormalizedMatricesRepository,
@@ -42,26 +42,26 @@ export class ReccomendationService {
   ) {}
 
   async Pagination(
-    reqQuery: ReccomendationPaginationReqQuery,
+    reqQuery: RecommendationPaginationReqQuery,
   ): Promise<
-    OffsetPaginatedDto<INormalizedMatrices | IRankingMatrices | IReccomendation>
+    OffsetPaginatedDto<INormalizedMatrices | IRankingMatrices | IRecommendation>
   > {
     try {
       let responseData: OffsetPaginatedDto<
-        INormalizedMatrices | IRankingMatrices | IReccomendation
+        INormalizedMatrices | IRankingMatrices | IRecommendation
       >;
       switch (reqQuery.stage) {
-        case ReccomendationStageEnum.NORMALIZATION:
+        case RecommendationStageEnum.NORMALIZATION:
           responseData =
             await this.normalizedMatrixRepository.Pagination(reqQuery);
           break;
-        case ReccomendationStageEnum.RANKING_NORMALIZATION:
+        case RecommendationStageEnum.RANKING_NORMALIZATION:
           responseData =
             await this.rankingMatricesRepository.Pagination(reqQuery);
           break;
-        case ReccomendationStageEnum.RECCOMENDATION:
+        case RecommendationStageEnum.RECCOMENDATION:
           responseData =
-            await this.reccomendationRepository.Pagination(reqQuery);
+            await this.recommendationRepository.Pagination(reqQuery);
           break;
         default:
           console.log('Stage Reccomendation not found');
@@ -312,7 +312,7 @@ export class ReccomendationService {
     }
   }
 
-  async CreateReccomendation(): Promise<Record<string, string>> {
+  async CreateRecommendation(): Promise<Record<string, string>> {
     try {
       const [foundAllRankings, foundAllStudents] = await Promise.all([
         this.rankingMatricesRepository.find({ relations: ['lecturer'] }),
@@ -366,6 +366,7 @@ export class ReccomendationService {
       const majors = [
         ThesisKeywordCategoryEnum.REKAYASA_PERANGKAT_LUNAK,
         ThesisKeywordCategoryEnum.SISTEM_CERDAS,
+        ThesisKeywordCategoryEnum.MULTIMEDIA,
       ];
 
       for (const major of majors) {
@@ -390,13 +391,13 @@ export class ReccomendationService {
               if (isAssigned) break;
 
               const currentLecturerStudentsCount =
-                await this.reccomendationRepository.count({
+                await this.recommendationRepository.count({
                   where: { lecturerId: lecturer.lecturer.id },
                 });
 
               if (currentLecturerStudentsCount < studentsPerLecturer) {
                 const existingRecommendation =
-                  await this.reccomendationRepository.findOne({
+                  await this.recommendationRepository.findOne({
                     where: {
                       studentId: student.studentId as Uuid,
                       lecturerId: lecturer.lecturer.id,
@@ -404,7 +405,7 @@ export class ReccomendationService {
                   });
 
                 if (!existingRecommendation) {
-                  await this.reccomendationRepository.save({
+                  await this.recommendationRepository.save({
                     studentId: student.studentId,
                     lecturerId: lecturer.lecturer.id,
                     reccomendationScore: lecturer.finalScore,
@@ -423,7 +424,7 @@ export class ReccomendationService {
       );
 
       for (const lecturerId of lecturerIds) {
-        const actualStudentCount = await this.reccomendationRepository.count({
+        const actualStudentCount = await this.recommendationRepository.count({
           where: { lecturerId },
         });
 
@@ -446,47 +447,47 @@ export class ReccomendationService {
     }
   }
 
-  async UpdateReccomendation(
-    reccomendationId: string,
-    req: UpdateReccomendationDto,
-  ): Promise<Record<string, IReccomendation | IReccomendation[]>> {
+  async UpdateRecommendation(
+    recommendationId: string,
+    req: UpdateRecommendationDto,
+  ): Promise<Record<string, IRecommendation | IRecommendation[]>> {
     try {
-      if (!reccomendationId) {
-        const foundReccomendations = await this.reccomendationRepository.find({
+      if (!recommendationId) {
+        const foundRecommendations = await this.recommendationRepository.find({
           where: {
-            id: In(req.reccomendationIds),
+            id: In(req.recommendationIds),
           },
         });
 
-        if (!foundReccomendations.length) {
+        if (!foundRecommendations.length) {
           throw new NotFoundException('Reccomendation not found');
         }
 
-        const mappedReccomendations = foundReccomendations.map(
-          (reccomendation, index) => ({
-            ...reccomendation,
+        const mappedRecommendations = foundRecommendations.map(
+          (recommendation: IRecommendation, index: number) => ({
+            ...recommendation,
             lecturerId: req.lecturerIds[index],
             studentId: req.studentIds[index],
           }),
         );
 
-        const updated = await this.reccomendationRepository.save(
-          mappedReccomendations,
+        const updated = await this.recommendationRepository.save(
+          mappedRecommendations,
         );
 
         return {
           data: updated.map((data, index) =>
-            UpdateReccomendationDto.toResponse({
-              id: req.reccomendationIds[index] as Uuid,
+            UpdateRecommendationDto.toResponse({
+              id: req.recommendationIds[index] as Uuid,
               createdAt: data.createdAt,
               updatedAt: data.updatedAt,
               deletedAt: data.deletedAt,
             }),
-          ) as unknown as IReccomendation[],
+          ) as unknown as IRecommendation[],
         };
       } else {
-        const foundReccomendation = await this.reccomendationRepository.findOne(
-          { where: { id: reccomendationId as Uuid } },
+        const foundReccomendation = await this.recommendationRepository.findOne(
+          { where: { id: recommendationId as Uuid } },
         );
         if (!foundReccomendation) {
           throw new NotFoundException('Reccomendation not found');
@@ -496,15 +497,15 @@ export class ReccomendationService {
         foundReccomendation.studentId = req.studentIds[0] as Uuid;
 
         const updated =
-          await this.reccomendationRepository.save(foundReccomendation);
+          await this.recommendationRepository.save(foundReccomendation);
 
         return {
-          data: UpdateReccomendationDto.toResponse({
+          data: UpdateRecommendationDto.toResponse({
             id: updated.id,
             createdAt: updated.createdAt,
             updatedAt: updated.updatedAt,
             deletedAt: updated.deletedAt,
-          }) as unknown as IReccomendation,
+          }) as unknown as IRecommendation,
         };
       }
     } catch (err: unknown) {
@@ -540,7 +541,7 @@ export class ReccomendationService {
 
         return {
           data: foundNormalizedMatrices.map((data, index) =>
-            UpdateReccomendationDto.toResponse({
+            UpdateRecommendationDto.toResponse({
               id: req.normalizedMatrixIds[index] as Uuid,
               createdAt: data.createdAt,
               updatedAt: data.updatedAt,
@@ -562,7 +563,7 @@ export class ReccomendationService {
         await this.normalizedMatrixRepository.delete(normalizationMatrixId);
 
         return {
-          data: UpdateReccomendationDto.toResponse({
+          data: UpdateRecommendationDto.toResponse({
             id: foundNormalizedMatrix.id,
             createdAt: foundNormalizedMatrix.createdAt,
             updatedAt: foundNormalizedMatrix.updatedAt,
@@ -602,7 +603,7 @@ export class ReccomendationService {
 
         return {
           data: foundRankingMatrices.map((data, index) =>
-            UpdateReccomendationDto.toResponse({
+            UpdateRecommendationDto.toResponse({
               id: req.rankingMatrixIds[index] as Uuid,
               createdAt: data.createdAt,
               updatedAt: data.updatedAt,
@@ -625,7 +626,7 @@ export class ReccomendationService {
         await this.rankingMatricesRepository.delete(rankingMatrixId);
 
         return {
-          data: UpdateReccomendationDto.toResponse({
+          data: UpdateRecommendationDto.toResponse({
             id: foundRankingMatrix.id,
             createdAt: foundRankingMatrix.createdAt,
             updatedAt: foundRankingMatrix.updatedAt,
@@ -643,57 +644,57 @@ export class ReccomendationService {
     }
   }
 
-  async DeleteReccomendation(
-    reccomendationId: string,
-    req: DeleteReccomendationDto,
-  ): Promise<Record<string, IReccomendation | IReccomendation[]>> {
+  async DeleteRecommendation(
+    recommendationId: string,
+    req: DeleteRecommendationDto,
+  ): Promise<Record<string, IRecommendation | IRecommendation[]>> {
     try {
       if (
-        Array.isArray(req.reccomendationIds) &&
-        req.reccomendationIds.length > 0
+        Array.isArray(req.recommendationIds) &&
+        req.recommendationIds.length > 0
       ) {
-        const foundReccomendations = await this.reccomendationRepository.find({
+        const foundReccomendations = await this.recommendationRepository.find({
           where: {
-            id: In(req.reccomendationIds),
+            id: In(req.recommendationIds),
           },
         });
         if (!foundReccomendations.length) {
           throw new NotFoundException('Reccomendation not found');
         }
 
-        await this.reccomendationRepository.delete(req.reccomendationIds);
+        await this.recommendationRepository.delete(req.recommendationIds);
 
         return {
           data: foundReccomendations.map((data, index) =>
-            UpdateReccomendationDto.toResponse({
-              id: req.reccomendationIds[index] as Uuid,
+            UpdateRecommendationDto.toResponse({
+              id: req.recommendationIds[index] as Uuid,
               createdAt: data.createdAt,
               updatedAt: data.updatedAt,
               deletedAt: data.deletedAt,
             }),
-          ) as unknown as IReccomendation[],
+          ) as unknown as IRecommendation[],
         };
       } else {
-        const foundReccomendation = await this.reccomendationRepository.findOne(
+        const foundRecommendation = await this.recommendationRepository.findOne(
           {
             where: {
-              id: reccomendationId as Uuid,
+              id: recommendationId as Uuid,
             },
           },
         );
-        if (!foundReccomendation) {
+        if (!foundRecommendation) {
           throw new NotFoundException('Reccomendation not found');
         }
 
-        await this.reccomendationRepository.delete(reccomendationId);
+        await this.recommendationRepository.delete(recommendationId);
 
         return {
-          data: UpdateReccomendationDto.toResponse({
-            id: foundReccomendation.id,
-            createdAt: foundReccomendation.createdAt,
-            updatedAt: foundReccomendation.updatedAt,
-            deletedAt: foundReccomendation.deletedAt,
-          }) as unknown as IReccomendation,
+          data: UpdateRecommendationDto.toResponse({
+            id: foundRecommendation.id,
+            createdAt: foundRecommendation.createdAt,
+            updatedAt: foundRecommendation.updatedAt,
+            deletedAt: foundRecommendation.deletedAt,
+          }) as unknown as IRecommendation,
         };
       }
     } catch (err: unknown) {

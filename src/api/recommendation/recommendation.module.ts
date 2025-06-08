@@ -4,7 +4,7 @@ import { LecturerEntity } from '@/database/entities/lecturer.entity';
 import { NormalizedMatricesEntity } from '@/database/entities/normalized-matrices.entity';
 import { RankingMatricesEntity } from '@/database/entities/ranking-matrix.entity';
 import { RankingNormalizedMatricesEntity } from '@/database/entities/ranking-normalized-matrices.entity';
-import { ReccomendationEntity } from '@/database/entities/reccomendation.entity';
+import { RecommendationEntity } from '@/database/entities/reccomendation.entity';
 import { SessionEntity } from '@/database/entities/session.entity';
 import { StudentEntity } from '@/database/entities/student.entity';
 import { SubCriteriaEntity } from '@/database/entities/sub-criteria.entity';
@@ -22,9 +22,9 @@ import { SessionRepository } from '../session/session.repository';
 import { StudentRepository } from '../student/student.repository';
 import { SubCriteriaRepository } from '../sub-criteria/sub-criteria.repository';
 import { ThesisKeywordRepository } from '../thesis-keyword/thesis-keyword.repository';
-import { ReccomendationController } from './reccomendation.controller';
-import { ReccomendationRepository } from './reccomendation.repository';
-import { ReccomendationService } from './reccomendation.service';
+import { RecommendationController } from './recommendation.controller';
+import { RecommendationRepository } from './recommendation.repository';
+import { RecommendationService } from './recommendation.service';
 
 @Module({
   imports: [
@@ -32,7 +32,7 @@ import { ReccomendationService } from './reccomendation.service';
       AssessmentEntity,
       CriteriaEntity,
       AssessmentEntity,
-      ReccomendationEntity,
+      RecommendationEntity,
       SubCriteriaEntity,
       NormalizedMatricesEntity,
       RankingNormalizedMatricesEntity,
@@ -43,12 +43,12 @@ import { ReccomendationService } from './reccomendation.service';
       SessionEntity,
     ]),
   ],
-  controllers: [ReccomendationController],
+  controllers: [RecommendationController],
   providers: [
-    ReccomendationService,
+    RecommendationService,
     AssessmentRepository,
     CriteriaRepository,
-    ReccomendationRepository,
+    RecommendationRepository,
     SubCriteriaRepository,
     NormalizedMatrixRepository,
     RankingNormalizedMatricesRepository,
@@ -60,4 +60,4 @@ import { ReccomendationService } from './reccomendation.service';
     JwtService,
   ],
 })
-export class ReccomendationModule {}
+export class RecommendationModule {}

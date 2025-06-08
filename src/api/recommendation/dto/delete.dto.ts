@@ -1,6 +1,6 @@
 import { StringFieldOptional } from '@/decorators/field.decorators';
 
-export class DeleteReccomendationDto {
+export class DeleteRecommendationDto {
   @StringFieldOptional({ each: true })
-  reccomendationIds: string[];
+  recommendationIds: string[];
 }

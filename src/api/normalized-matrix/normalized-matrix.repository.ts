@@ -6,7 +6,7 @@ import { toOrderEnum } from '@/utils/util';
 import { InjectRepository } from '@nestjs/typeorm';
 import { plainToInstance } from 'class-transformer';
 import { Repository, SelectQueryBuilder } from 'typeorm';
-import { ReccomendationPaginationReqQuery } from '../reccomendation/dto/query.dto';
+import { ReccomendationPaginationReqQuery } from '../recommendation/dto/query.dto';
 
 export class NormalizedMatrixRepository extends Repository<NormalizedMatricesEntity> {
   constructor(
