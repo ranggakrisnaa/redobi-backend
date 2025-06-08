@@ -1,78 +1,78 @@
-name: Deploy to Heroku
+# name: Deploy to Heroku
 
-on:
-  push:
-    branches:
-      - main
+# on:
+#   push:
+#     branches:
+#       - main
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v3
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
+#       - name: Setup Node.js
+#         uses: actions/setup-node@v3
+#         with:
+#           node-version: '18'
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
-          run_install: false
+#       - name: Install pnpm
+#         uses: pnpm/action-setup@v2
+#         with:
+#           version: 8
+#           run_install: false
 
-      - name: Cache pnpm dependencies
-        uses: actions/cache@v3
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+#       - name: Cache pnpm dependencies
+#         uses: actions/cache@v3
+#         with:
+#           path: ${{ env.STORE_PATH }}
+#           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+#           restore-keys: |
+#             ${{ runner.os }}-pnpm-store-
 
-      - name: Disable Husky
-        run: npm pkg delete scripts.prepare
+#       - name: Disable Husky
+#         run: npm pkg delete scripts.prepare
 
-      - name: Install dependencies
-        run: |
-          HUSKY=0 pnpm install --no-frozen-lockfile
+#       - name: Install dependencies
+#         run: |
+#           HUSKY=0 pnpm install --no-frozen-lockfile
 
-      # - name: Run tests
-      #   run: |
-      #     if [ -f "package.json" ] && grep -q "\"test\"" "package.json"; then
-      #       pnpm test
-      #     else
-      #       echo "No test script found, skipping tests"
-      #     fi
+#       # - name: Run tests
+#       #   run: |
+#       #     if [ -f "package.json" ] && grep -q "\"test\"" "package.json"; then
+#       #       pnpm test
+#       #     else
+#       #       echo "No test script found, skipping tests"
+#       #     fi
 
-      - name: Install env-cmd
-        run: pnpm add -g env-cmd
+#       - name: Install env-cmd
+#         run: pnpm add -g env-cmd
 
-      - name: Build application
-        run: pnpm run build
+#       - name: Build application
+#         run: pnpm run build
 
-      - name: Install Heroku CLI
-        run: |
-          curl https://cli-assets.heroku.com/install.sh | sh
+#       - name: Install Heroku CLI
+#         run: |
+#           curl https://cli-assets.heroku.com/install.sh | sh
 
-      - name: Login to Heroku
-        env:
-          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-        run: heroku auth:token
+#       - name: Login to Heroku
+#         env:
+#           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+#         run: heroku auth:token
 
-      - name: Set Git Remote
-        run: git remote add heroku https://git.heroku.com/${{ secrets.HEROKU_APP_NAME }}.git
+#       - name: Set Git Remote
+#         run: git remote add heroku https://git.heroku.com/${{ secrets.HEROKU_APP_NAME }}.git
 
-      # - name: Pull from Heroku to avoid conflicts
-      #   continue-on-error: true
-      #   run: git pull --rebase heroku main
+#       # - name: Pull from Heroku to avoid conflicts
+#       #   continue-on-error: true
+#       #   run: git pull --rebase heroku main
 
-      - name: Unshallow Git Repository
-        run: git fetch --prune --unshallow
+#       - name: Unshallow Git Repository
+#         run: git fetch --prune --unshallow
 
-      - name: Push to Heroku
-        env:
-          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-        run: |
-          git remote set-url heroku https://heroku:${{ secrets.HEROKU_API_KEY }}@git.heroku.com/${{ secrets.HEROKU_APP_NAME }}.git
-          git push heroku main --force
+#       - name: Push to Heroku
+#         env:
+#           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+#         run: |
+#           git remote set-url heroku https://heroku:${{ secrets.HEROKU_API_KEY }}@git.heroku.com/${{ secrets.HEROKU_APP_NAME }}.git
+#           git push heroku main --force
