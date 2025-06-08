@@ -62,5 +62,6 @@ export default registerAs<MailConfig>('mail', () => {
     requireTLS: process.env.MAIL_REQUIRE_TLS === 'true',
     defaultEmail: process.env.MAIL_DEFAULT_EMAIL,
     defaultName: process.env.MAIL_DEFAULT_NAME,
+    apiKey: process.env.RESEND_API_KEY,
   };
 });

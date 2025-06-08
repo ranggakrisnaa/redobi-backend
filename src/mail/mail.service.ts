@@ -1,45 +1,48 @@
 import { AllConfigType } from '@/config/config.type';
-import { MailerService } from '@nestjs-modules/mailer';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Resend } from 'resend';
 
 @Injectable()
 export class MailService {
-  constructor(
-    private readonly configService: ConfigService<AllConfigType>,
-    private readonly mailerService: MailerService,
-  ) {}
+  private readonly resend: Resend;
+
+  constructor(private readonly configService: ConfigService<AllConfigType>) {
+    this.resend = new Resend(
+      this.configService.get('mail.apiKey', { infer: true }),
+    );
+  }
 
   async sendEmailVerification(email: string, token: string) {
-    // Please replace the URL with your own frontend URL
     const url = `${this.configService.get('app.url', { infer: true })}/api/v1/auth/verify/email?token=${token}`;
 
-    await this.mailerService.sendMail({
+    await this.resend.emails.send({
+      from: 'Your App <noreply@yourdomain.com>',
       to: email,
       subject: 'Email Verification',
-      template: 'email-verification',
-      context: {
-        email: email,
-        url,
-      },
+      html: `
+        <p>Hello,</p>
+        <p>Please verify your email by clicking the link below:</p>
+        <a href="${url}">${url}</a>
+      `,
     });
   }
 
   async sendEmailOTPCode(email: string, otpCode: number, isUrl: string) {
     const url =
-      isUrl == 'user'
+      isUrl === 'user'
         ? `${this.configService.get('app.frontendUrl', { infer: true })}/users/verify`
         : `${this.configService.get('app.frontendUrl', { infer: true })}/verify`;
 
-    await this.mailerService.sendMail({
+    await this.resend.emails.send({
+      from: 'Your App <noreply@yourdomain.com>',
       to: email,
-      subject: 'Email Verification',
-      template: 'email-otp',
-      context: {
-        email,
-        otpCode,
-        url,
-      },
+      subject: 'OTP Verification Code',
+      html: `
+        <p>Hello,</p>
+        <p>Your OTP Code is: <strong>${otpCode}</strong></p>
+        <p>Verify here: <a href="${url}">${url}</a></p>
+      `,
     });
   }
 }

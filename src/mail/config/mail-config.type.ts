@@ -8,4 +8,5 @@ export type MailConfig = {
   requireTLS: boolean;
   defaultEmail?: string;
   defaultName?: string;
+  apiKey: string;
 };
