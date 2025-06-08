@@ -1,6 +1,9 @@
 import { AllConfigType } from '@/config/config.type';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { readFile } from 'fs/promises';
+import Handlebars from 'handlebars';
+import { join } from 'path';
 import { Resend } from 'resend';
 
 @Injectable()
@@ -34,15 +37,23 @@ export class MailService {
         ? `${this.configService.get('app.frontendUrl', { infer: true })}/users/verify`
         : `${this.configService.get('app.frontendUrl', { infer: true })}/verify`;
 
-    await this.resend.emails.send({
-      from: 'Your App <noreply@yourdomain.com>',
-      to: email,
-      subject: 'OTP Verification Code',
-      html: `
-        <p>Hello,</p>
-        <p>Your OTP Code is: <strong>${otpCode}</strong></p>
-        <p>Verify here: <a href="${url}">${url}</a></p>
-      `,
-    });
+    const templatePath = join(__dirname, '.', 'templates', 'email-otp.hbs');
+
+    try {
+      const templateSource = await readFile(templatePath, 'utf8');
+      const template = Handlebars.compile(templateSource);
+      const html = template({ email, otpCode, url });
+
+      const result = await this.resend.emails.send({
+        from: 'Redobi <onboarding@resend.dev>',
+        to: email,
+        subject: 'OTP Verification Code',
+        html,
+      });
+
+      console.log('Resend email result:', result);
+    } catch (error) {
+      console.error('Failed to send email:', error);
+    }
   }
 }
