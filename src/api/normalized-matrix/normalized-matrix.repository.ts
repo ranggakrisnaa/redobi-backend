@@ -6,7 +6,7 @@ import { toOrderEnum } from '@/utils/util';
 import { InjectRepository } from '@nestjs/typeorm';
 import { plainToInstance } from 'class-transformer';
 import { Repository, SelectQueryBuilder } from 'typeorm';
-import { ReccomendationPaginationReqQuery } from '../recommendation/dto/query.dto';
+import { RecommendationPaginationReqQuery } from '../recommendation/dto/query.dto';
 
 export class NormalizedMatrixRepository extends Repository<NormalizedMatricesEntity> {
   constructor(
@@ -17,7 +17,7 @@ export class NormalizedMatrixRepository extends Repository<NormalizedMatricesEnt
   }
 
   async Pagination(
-    reqQuery: ReccomendationPaginationReqQuery,
+    reqQuery: RecommendationPaginationReqQuery,
   ): Promise<OffsetPaginatedDto<INormalizedMatrices>> {
     const targetName = this.repo.metadata.targetName;
     const query = this.createQueryBuilder(targetName)
@@ -51,7 +51,7 @@ export class NormalizedMatrixRepository extends Repository<NormalizedMatricesEnt
 
   private applyFilters(
     query: SelectQueryBuilder<NormalizedMatricesEntity>,
-    req: ReccomendationPaginationReqQuery,
+    req: RecommendationPaginationReqQuery,
     targetName: string,
   ) {
     if (req.search) {
