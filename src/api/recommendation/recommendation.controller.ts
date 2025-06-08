@@ -1,7 +1,7 @@
 import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
 import { INormalizedMatrices } from '@/database/interface-model/normalized-matrices-entity.interface';
 import { IRankingMatrices } from '@/database/interface-model/ranking-matrices-entity.interface';
-import { IReccomendation } from '@/database/interface-model/reccomendation-entity.interface';
+import { IRecommendation } from '@/database/interface-model/recommendation-entity.interface';
 import { ApiAuth } from '@/decorators/http.decorators';
 import { AuthGuard } from '@/guards/auth.guard';
 import {
@@ -18,38 +18,38 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { DeleteNormalizedMatrix } from '../normalized-matrix/dto/delete.dto';
 import { DeleteRankingMatrix } from '../ranking-matrices/dto/delete.dto';
-import { DeleteReccomendationDto } from './dto/delete.dto';
-import { ReccomendationPaginationReqQuery } from './dto/query.dto';
-import { UpdateReccomendationDto } from './dto/update.dto';
-import { ReccomendationService } from './reccomendation.service';
+import { DeleteRecommendationDto } from './dto/delete.dto';
+import { RecommendationPaginationReqQuery } from './dto/query.dto';
+import { UpdateRecommendationDto } from './dto/update.dto';
+import { RecommendationService } from './recommendation.service';
 
-@ApiTags('reccomendations')
+@ApiTags('recommendations')
 @Controller({
-  path: 'reccomendations',
+  path: 'recommendations',
   version: '1',
 })
 @UseGuards(AuthGuard)
-export class ReccomendationController {
-  constructor(private readonly reccomendationService: ReccomendationService) {}
+export class RecommendationController {
+  constructor(private readonly recommendationService: RecommendationService) {}
 
   @ApiAuth({
-    summary: 'Pagination reccomendation',
+    summary: 'Pagination recomendation',
   })
   @Get()
   async Pagination(
-    @Query() reqQuery: ReccomendationPaginationReqQuery,
+    @Query() reqQuery: RecommendationPaginationReqQuery,
   ): Promise<
-    OffsetPaginatedDto<INormalizedMatrices | IRankingMatrices | IReccomendation>
+    OffsetPaginatedDto<INormalizedMatrices | IRankingMatrices | IRecommendation>
   > {
-    return await this.reccomendationService.Pagination(reqQuery);
+    return await this.recommendationService.Pagination(reqQuery);
   }
 
   @ApiAuth({
-    summary: 'Create reccomendation',
+    summary: 'Create recommendation',
   })
   @Post()
-  async CreateReccomendation() {
-    return await this.reccomendationService.CreateReccomendation();
+  async CreateRecommendation() {
+    return await this.recommendationService.CreateRecommendation();
   }
 
   @ApiAuth({
@@ -57,7 +57,7 @@ export class ReccomendationController {
   })
   @Post('/normalized')
   async CreateNormalizationMatrix() {
-    return await this.reccomendationService.CreateNormalizationMatrix();
+    return await this.recommendationService.CreateNormalizationMatrix();
   }
 
   @ApiAuth({
@@ -65,18 +65,18 @@ export class ReccomendationController {
   })
   @Post('/rank')
   async NormalizationMatrixRanking() {
-    return await this.reccomendationService.NormalizationMatrixRanking();
+    return await this.recommendationService.NormalizationMatrixRanking();
   }
 
   @ApiAuth({
-    summary: 'Update Reccomendation',
+    summary: 'Update Recommendation',
   })
-  @Put(':reccomendationId?')
-  async UpdateReccomendation(
-    @Body() req: UpdateReccomendationDto,
+  @Put(':recommendationId?')
+  async UpdateRecommendation(
+    @Body() req: UpdateRecommendationDto,
     @Param('reccomendationId') reccomendationId: string,
   ) {
-    return await this.reccomendationService.UpdateReccomendation(
+    return await this.recommendationService.UpdateRecommendation(
       reccomendationId,
       req,
     );
@@ -90,7 +90,7 @@ export class ReccomendationController {
     @Param('normalizedMatrixId') normalizedMatrixId: string,
     @Body() req: DeleteNormalizedMatrix,
   ) {
-    return await this.reccomendationService.DeleteNormalizationMatrix(
+    return await this.recommendationService.DeleteNormalizationMatrix(
       normalizedMatrixId,
       req,
     );
@@ -104,7 +104,7 @@ export class ReccomendationController {
     @Param('rankingMatrixId') rankingMatrixId: string,
     @Body() req: DeleteRankingMatrix,
   ) {
-    return await this.reccomendationService.DeleteRankingMatrix(
+    return await this.recommendationService.DeleteRankingMatrix(
       rankingMatrixId,
       req,
     );
@@ -113,13 +113,13 @@ export class ReccomendationController {
   @ApiAuth({
     summary: 'Delete Reccomendation',
   })
-  @Delete(':reccomendationId?')
-  async DeleteReccomendation(
-    @Param('reccomendationId') reccomendationId: string,
-    @Body() req: DeleteReccomendationDto,
+  @Delete(':recommendationId?')
+  async DeleteRecommendation(
+    @Param('recommendationId') recommendationId: string,
+    @Body() req: DeleteRecommendationDto,
   ) {
-    return await this.reccomendationService.DeleteReccomendation(
-      reccomendationId,
+    return await this.recommendationService.DeleteRecommendation(
+      recommendationId,
       req,
     );
   }

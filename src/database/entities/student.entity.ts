@@ -10,12 +10,12 @@ import { ClassEnum } from '../enums/class.enum';
 import { MajorEnum } from '../enums/major.enum';
 
 import { Uuid } from '../../common/types/common.type';
-import { IReccomendation } from '../interface-model/reccomendation-entity.interface';
+import { IRecommendation } from '../interface-model/recommendation-entity.interface';
 import { ISelection } from '../interface-model/selection-entity.interface';
 import { IStudent } from '../interface-model/student-entity.interface';
 import { IUser } from '../interface-model/user-entity.interface';
 import { AbstractEntity } from './abstract.entity';
-import { ReccomendationEntity } from './reccomendation.entity';
+import { RecommendationEntity } from './reccomendation.entity';
 import { SelectionEntity } from './selection.entity';
 import { UserEntity } from './user.entity';
 
@@ -68,8 +68,8 @@ export class StudentEntity extends AbstractEntity implements IStudent {
   selection?: ISelection[];
 
   @OneToMany(
-    () => ReccomendationEntity,
-    (reccomendation) => reccomendation.student,
+    () => RecommendationEntity,
+    (recommendation) => recommendation.student,
   )
-  recomendation?: IReccomendation[];
+  recommendation?: IRecommendation[];
 }

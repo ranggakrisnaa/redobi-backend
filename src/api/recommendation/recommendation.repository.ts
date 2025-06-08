@@ -1,24 +1,24 @@
 import { OffsetPaginationDto } from '@/common/dto/offset-pagination/offset-pagination.dto';
 import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
-import { ReccomendationEntity } from '@/database/entities/reccomendation.entity';
-import { IReccomendation } from '@/database/interface-model/reccomendation-entity.interface';
+import { RecommendationEntity } from '@/database/entities/reccomendation.entity';
+import { IRecommendation } from '@/database/interface-model/recommendation-entity.interface';
 import { toOrderEnum } from '@/utils/util';
 import { InjectRepository } from '@nestjs/typeorm';
 import { plainToInstance } from 'class-transformer';
 import { Repository, SelectQueryBuilder } from 'typeorm';
-import { ReccomendationPaginationReqQuery } from './dto/query.dto';
+import { RecommendationPaginationReqQuery } from './dto/query.dto';
 
-export class ReccomendationRepository extends Repository<ReccomendationEntity> {
+export class RecommendationRepository extends Repository<RecommendationEntity> {
   constructor(
-    @InjectRepository(ReccomendationEntity)
-    private readonly repo: Repository<ReccomendationEntity>,
+    @InjectRepository(RecommendationEntity)
+    private readonly repo: Repository<RecommendationEntity>,
   ) {
     super(repo.target, repo.manager, repo.queryRunner);
   }
 
   async Pagination(
-    reqQuery: ReccomendationPaginationReqQuery,
-  ): Promise<OffsetPaginatedDto<IReccomendation>> {
+    reqQuery: RecommendationPaginationReqQuery,
+  ): Promise<OffsetPaginatedDto<IRecommendation>> {
     const targetName = this.repo.metadata.targetName;
     const query = this.createQueryBuilder(targetName);
 
@@ -50,8 +50,8 @@ export class ReccomendationRepository extends Repository<ReccomendationEntity> {
   }
 
   private applyFilters(
-    query: SelectQueryBuilder<ReccomendationEntity>,
-    _req: ReccomendationPaginationReqQuery,
+    query: SelectQueryBuilder<RecommendationEntity>,
+    _req: RecommendationPaginationReqQuery,
     _targetName: string,
   ) {
     return query;

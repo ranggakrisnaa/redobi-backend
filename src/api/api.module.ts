@@ -5,7 +5,7 @@ import { CriteriaModule } from './criteria/criteria.module';
 import { HealthModule } from './health/health.module';
 import { HomeModule } from './home/home.module';
 import { LecturerModule } from './lecturer/lecturer.module';
-import { ReccomendationModule } from './reccomendation/reccomendation.module';
+import { RecommendationModule } from './recommendation/recommendation.module';
 import { SessionModule } from './session/session.module';
 import { StudentModule } from './student/student.module';
 import { ThesisKeywordModule } from './thesis-keyword/thesis-keyword.module';
@@ -23,7 +23,7 @@ import { UserModule } from './user/user.module';
     CriteriaModule,
     AssessmentModule,
     ThesisKeywordModule,
-    ReccomendationModule,
+    RecommendationModule,
   ],
 })
 export class ApiModule {}
