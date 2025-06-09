@@ -1,6 +1,6 @@
 import { Uuid } from '@/common/types/common.type';
 
-export class IAssessmentSubCriteria {
+export interface IAssessmentSubCriteria {
   id: number;
   subCriteriaId: number;
   score: number;
