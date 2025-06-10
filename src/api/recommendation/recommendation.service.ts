@@ -533,7 +533,7 @@ export class RecommendationService {
               id: In(req.normalizedMatrixIds),
             },
           });
-        if (!foundNormalizedMatrices.length) {
+        if (foundNormalizedMatrices.length < 1) {
           throw new NotFoundException('Reccomendation not found');
         }
 
@@ -595,7 +595,7 @@ export class RecommendationService {
             id: In(req.rankingMatrixIds),
           },
         });
-        if (!foundRankingMatrices.length) {
+        if (foundRankingMatrices.length < 1) {
           throw new NotFoundException('Reccomendation not found');
         }
 
@@ -658,7 +658,7 @@ export class RecommendationService {
             id: In(req.recommendationIds),
           },
         });
-        if (!foundReccomendations.length) {
+        if (foundReccomendations.length < 1) {
           throw new NotFoundException('Reccomendation not found');
         }
 
