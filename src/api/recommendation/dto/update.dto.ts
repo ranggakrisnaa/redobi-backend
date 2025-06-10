@@ -17,11 +17,11 @@ export class UpdateRecommendationDto {
   studentIds: string[];
 
   static toResponse(dto: Partial<UpdateRecommendationDto>) {
-    return dto.recommendationIds.map((recomendationId: string) => ({
-      id: recomendationId,
+    return {
+      id: dto.id,
       createdAt: dto.createdAt,
       updatedAt: dto.updatedAt,
       deletedAt: dto.deletedAt,
-    }));
+    };
   }
 }
