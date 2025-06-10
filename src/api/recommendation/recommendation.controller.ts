@@ -85,7 +85,7 @@ export class RecommendationController {
   @ApiAuth({
     summary: 'Delete Normalization Matrix',
   })
-  @Delete('normalized/:normalizedMatrixId')
+  @Delete('normalized/:normalizedMatrixId?')
   async DeleteNormalizationMatrix(
     @Param('normalizedMatrixId') normalizedMatrixId: string,
     @Body() req: DeleteNormalizedMatrix,
@@ -99,7 +99,7 @@ export class RecommendationController {
   @ApiAuth({
     summary: 'Delete Ranking Matrix',
   })
-  @Delete('ranking/:rankingMatrixId')
+  @Delete('ranking/:rankingMatrixId?')
   async DeleteRankingMatrix(
     @Param('rankingMatrixId') rankingMatrixId: string,
     @Body() req: DeleteRankingMatrix,
@@ -113,7 +113,7 @@ export class RecommendationController {
   @ApiAuth({
     summary: 'Delete Reccomendation',
   })
-  @Delete(':recommendationId')
+  @Delete(':recommendationId?')
   async DeleteRecommendation(
     @Param('recommendationId') recommendationId: string,
     @Body() req: DeleteRecommendationDto,
