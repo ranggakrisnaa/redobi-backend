@@ -20,7 +20,10 @@ export class RankingMatricesRepository extends Repository<RankingMatricesEntity>
     reqQuery: RecommendationPaginationReqQuery,
   ): Promise<OffsetPaginatedDto<IRankingMatrices>> {
     const targetName = this.repo.metadata.targetName;
-    const query = this.createQueryBuilder(targetName);
+    const query = this.createQueryBuilder(targetName).leftJoinAndSelect(
+      `${targetName}.lecturer`,
+      'lecturer',
+    );
 
     this.applyFilters(query, reqQuery, targetName);
 
