@@ -53,6 +53,7 @@ export class RankingMatricesEntity
   @OneToMany(
     () => RankingNormalizedMatricesEntity,
     (rankingNormalized) => rankingNormalized.rankingMatrices,
+    { onDelete: 'CASCADE' },
   )
   rankingNormalizedMatrices?: IRankingNormalizedMatrices[];
 }
