@@ -269,25 +269,33 @@ export class RecommendationService {
       );
 
       const foundAllRankings = await this.rankingMatricesRepository.find();
-
       const savedRankingMap = new Map<string, { id: string }>();
+
       for (let i = 0; i < sortedRanking.length; i++) {
         const item = sortedRanking[i];
-        const alreadyExists = foundAllRankings.some(
-          (existing) =>
-            existing.lecturerId === item.lecturerId ||
-            existing.finalScore === item.finalScore,
+        const existing = foundAllRankings.find(
+          (r) => r.lecturerId === item.lecturerId,
         );
-        if (alreadyExists) continue;
 
-        const ranking = await this.rankingMatricesRepository.save({
-          lecturerId: item.lecturerId,
-          finalScore: item.finalScore,
-          rank: i + 1,
-        });
+        let ranking: IRankingMatrices;
+        if (existing) {
+          ranking = await this.rankingMatricesRepository.save({
+            ...existing,
+            finalScore: item.finalScore,
+            rank: i + 1,
+          });
+        } else {
+          ranking = await this.rankingMatricesRepository.save({
+            lecturerId: item.lecturerId,
+            finalScore: item.finalScore,
+            rank: i + 1,
+          });
+        }
 
         savedRankingMap.set(item.lecturerId, ranking);
       }
+
+      await this.rankingNormalizedMatricesRepository.clear();
 
       for (const normalized of foundMatrices) {
         const rankingMatrix = savedRankingMap.get(normalized.lecturerId);
@@ -300,7 +308,7 @@ export class RecommendationService {
       }
 
       return {
-        message: 'Matrix normalization ranknig created successfully.',
+        message: 'Matrix normalization ranking updated successfully.',
       };
     } catch (err: unknown) {
       if (err instanceof InternalServerErrorException)
