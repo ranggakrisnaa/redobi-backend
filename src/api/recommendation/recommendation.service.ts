@@ -8,6 +8,7 @@ import { INormalizedMatrices } from '@/database/interface-model/normalized-matri
 import { IRankingMatrices } from '@/database/interface-model/ranking-matrices-entity.interface';
 import { IRecommendation } from '@/database/interface-model/recommendation-entity.interface';
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -80,14 +81,17 @@ export class RecommendationService {
     }
   }
 
-  async Detail() {}
-
   async CreateNormalizationMatrix(): Promise<Record<string, string>> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
+      // Hapus semua data normalisasi lama
+      await queryRunner.manager.clear(
+        this.normalizedMatrixRepository.metadata.target,
+      );
+
       const allAssessments = await this.assessmentRepository.find({
         relations: [
           'assessmentSubCriteria',
@@ -102,16 +106,6 @@ export class RecommendationService {
           },
         },
       });
-
-      const existingNormalizedMatrices =
-        await this.normalizedMatrixRepository.find();
-
-      const normalizedMatrixMap = new Map(
-        existingNormalizedMatrices.map((matrix) => [
-          `${matrix.lecturerId}-${matrix.criteriaId}`,
-          matrix,
-        ]),
-      );
 
       const subCriteriaScoresMap = new Map<
         number,
@@ -203,7 +197,6 @@ export class RecommendationService {
         }
       }
 
-      const bulkUpdateData = [];
       const bulkInsertData = [];
 
       for (const [key, scoreList] of groupedNormalizedValues.entries()) {
@@ -211,27 +204,11 @@ export class RecommendationService {
         const avgScore =
           scoreList.reduce((acc, val) => acc + val, 0) / scoreList.length;
 
-        const existingRecord = normalizedMatrixMap.get(key);
-
-        if (existingRecord) {
-          bulkUpdateData.push({
-            id: existingRecord.id,
-            normalizedValue: avgScore,
-          });
-        } else {
-          bulkInsertData.push({
-            lecturerId,
-            criteriaId,
-            normalizedValue: avgScore,
-          });
-        }
-      }
-
-      if (bulkUpdateData.length > 0) {
-        await queryRunner.manager.save(
-          this.normalizedMatrixRepository.metadata.target,
-          bulkUpdateData,
-        );
+        bulkInsertData.push({
+          lecturerId,
+          criteriaId,
+          normalizedValue: avgScore,
+        });
       }
 
       if (bulkInsertData.length > 0) {
@@ -544,8 +521,9 @@ export class RecommendationService {
               id: In(req.normalizedMatrixIds),
             },
           });
+
         if (foundNormalizedMatrices.length < 1) {
-          throw new NotFoundException('Reccomendation not found');
+          throw new NotFoundException('Recommendation not found');
         }
 
         await this.normalizedMatrixRepository.delete(req.normalizedMatrixIds);
@@ -558,17 +536,41 @@ export class RecommendationService {
               updatedAt: data.updatedAt,
               deletedAt: data.deletedAt,
             }),
-          ) as unknown as INormalizedMatrices[],
+          ) as INormalizedMatrices[],
         };
-      } else {
+      }
+
+      if (req.deleteAll === true) {
+        const allMatrices = await this.normalizedMatrixRepository.find();
+
+        if (allMatrices.length < 1) {
+          throw new NotFoundException('No normalization matrices found');
+        }
+
+        await this.normalizedMatrixRepository.clear();
+
+        return {
+          data: allMatrices.map((data) =>
+            UpdateRecommendationDto.toResponse({
+              id: data.id,
+              createdAt: data.createdAt,
+              updatedAt: data.updatedAt,
+              deletedAt: data.deletedAt,
+            }),
+          ) as INormalizedMatrices[],
+        };
+      }
+
+      if (normalizationMatrixId) {
         const foundNormalizedMatrix =
           await this.normalizedMatrixRepository.findOne({
             where: {
               id: normalizationMatrixId as Uuid,
             },
           });
+
         if (!foundNormalizedMatrix) {
-          throw new NotFoundException('Reccomendation not found');
+          throw new NotFoundException('Recommendation not found');
         }
 
         await this.normalizedMatrixRepository.delete(normalizationMatrixId);
@@ -579,25 +581,27 @@ export class RecommendationService {
             createdAt: foundNormalizedMatrix.createdAt,
             updatedAt: foundNormalizedMatrix.updatedAt,
             deletedAt: foundNormalizedMatrix.deletedAt,
-          }) as unknown as INormalizedMatrices,
+          }) as INormalizedMatrices,
         };
       }
-    } catch (err: unknown) {
-      if (err instanceof InternalServerErrorException)
-        throw new InternalServerErrorException(
-          err instanceof Error ? err.message : 'Unexpected error',
-        );
 
-      throw err;
+      throw new BadRequestException(
+        'No valid normalization or normalizations provided',
+      );
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        throw new InternalServerErrorException(err.message);
+      }
+      throw new InternalServerErrorException('Unexpected error');
     }
   }
-
   async DeleteRankingMatrix(
-    rankingMatrixId: string,
-    req: DeleteRankingMatrix,
+    rankingMatrixId?: string,
+    req?: DeleteRankingMatrix,
   ): Promise<Record<string, IRankingMatrices | IRankingMatrices[]>> {
     try {
       if (
+        req?.rankingMatrixIds &&
         Array.isArray(req.rankingMatrixIds) &&
         req.rankingMatrixIds.length > 0
       ) {
@@ -606,8 +610,9 @@ export class RecommendationService {
             id: In(req.rankingMatrixIds),
           },
         });
+
         if (foundRankingMatrices.length < 1) {
-          throw new NotFoundException('Reccomendation not found');
+          throw new NotFoundException('Recommendation not found');
         }
 
         await this.rankingMatricesRepository.delete(req.rankingMatrixIds);
@@ -620,9 +625,32 @@ export class RecommendationService {
               updatedAt: data.updatedAt,
               deletedAt: data.deletedAt,
             }),
-          ) as unknown as IRankingMatrices[],
+          ) as IRankingMatrices[],
         };
-      } else {
+      }
+
+      if (req.deleteAll === true) {
+        const allMatrices = await this.rankingMatricesRepository.find();
+
+        if (allMatrices.length < 1) {
+          throw new NotFoundException('No ranking matrices found');
+        }
+
+        await this.rankingMatricesRepository.clear();
+
+        return {
+          data: allMatrices.map((data) =>
+            UpdateRecommendationDto.toResponse({
+              id: data.id,
+              createdAt: data.createdAt,
+              updatedAt: data.updatedAt,
+              deletedAt: data.deletedAt,
+            }),
+          ) as IRankingMatrices[],
+        };
+      }
+
+      if (rankingMatrixId) {
         const foundRankingMatrix = await this.rankingMatricesRepository.findOne(
           {
             where: {
@@ -630,8 +658,9 @@ export class RecommendationService {
             },
           },
         );
+
         if (!foundRankingMatrix) {
-          throw new NotFoundException('Reccomendation not found');
+          throw new NotFoundException('Recommendation not found');
         }
 
         await this.rankingMatricesRepository.delete(rankingMatrixId);
@@ -642,50 +671,77 @@ export class RecommendationService {
             createdAt: foundRankingMatrix.createdAt,
             updatedAt: foundRankingMatrix.updatedAt,
             deletedAt: foundRankingMatrix.deletedAt,
-          }) as unknown as IRankingMatrices,
+          }) as IRankingMatrices,
         };
       }
-    } catch (err: unknown) {
-      if (err instanceof InternalServerErrorException)
-        throw new InternalServerErrorException(
-          err instanceof Error ? err.message : 'Unexpected error',
-        );
 
-      throw err;
+      throw new BadRequestException(
+        'No valid rankingMatrixId or rankingMatrixIds provided',
+      );
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        throw new InternalServerErrorException(err.message);
+      }
+      throw new InternalServerErrorException('Unexpected error');
     }
   }
 
   async DeleteRecommendation(
-    recommendationId: string,
-    req: DeleteRecommendationDto,
+    recommendationId?: string,
+    req?: DeleteRecommendationDto,
   ): Promise<Record<string, IRecommendation | IRecommendation[]>> {
     try {
       if (
-        Array.isArray(req.recommendationIds) &&
+        Array.isArray(req?.recommendationIds) &&
         req.recommendationIds.length > 0
       ) {
-        const foundReccomendations = await this.recommendationRepository.find({
+        const foundRecommendations = await this.recommendationRepository.find({
           where: {
             id: In(req.recommendationIds),
           },
         });
-        if (foundReccomendations.length < 1) {
-          throw new NotFoundException('Reccomendation not found');
+
+        if (foundRecommendations.length < 1) {
+          throw new NotFoundException('Recommendation not found');
         }
 
         await this.recommendationRepository.delete(req.recommendationIds);
 
         return {
-          data: foundReccomendations.map((data, index) =>
+          data: foundRecommendations.map((data, index) =>
             UpdateRecommendationDto.toResponse({
               id: req.recommendationIds[index] as Uuid,
               createdAt: data.createdAt,
               updatedAt: data.updatedAt,
               deletedAt: data.deletedAt,
             }),
-          ) as unknown as IRecommendation[],
+          ) as IRecommendation[],
         };
-      } else {
+      }
+
+      if (req?.deleteAll === true) {
+        const allRecommendations = await this.recommendationRepository.find();
+
+        if (allRecommendations.length < 1) {
+          throw new NotFoundException('No recommendations found');
+        }
+
+        await this.recommendationRepository.clear();
+
+        return {
+          data: allRecommendations.map((data) =>
+            UpdateRecommendationDto.toResponse({
+              id: data.id,
+              createdAt: data.createdAt,
+              updatedAt: data.updatedAt,
+              deletedAt: data.deletedAt,
+            }),
+          ) as IRecommendation[],
+        };
+      }
+
+      // Case: Delete single by ID (optional)
+      if (recommendationId) {
         const foundRecommendation = await this.recommendationRepository.findOne(
           {
             where: {
@@ -693,8 +749,9 @@ export class RecommendationService {
             },
           },
         );
+
         if (!foundRecommendation) {
-          throw new NotFoundException('Reccomendation not found');
+          throw new NotFoundException('Recommendation not found');
         }
 
         await this.recommendationRepository.delete(recommendationId);
@@ -705,16 +762,19 @@ export class RecommendationService {
             createdAt: foundRecommendation.createdAt,
             updatedAt: foundRecommendation.updatedAt,
             deletedAt: foundRecommendation.deletedAt,
-          }) as unknown as IRecommendation,
+          }) as IRecommendation,
         };
       }
-    } catch (err: unknown) {
-      if (err instanceof InternalServerErrorException)
-        throw new InternalServerErrorException(
-          err instanceof Error ? err.message : 'Unexpected error',
-        );
 
-      throw err;
+      // If no valid input
+      throw new BadRequestException(
+        'No valid recommendationId, recommendationIds, or deleteAll provided',
+      );
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        throw new InternalServerErrorException(err.message);
+      }
+      throw new InternalServerErrorException('Unexpected error');
     }
   }
 }
