@@ -8,7 +8,6 @@ import { INormalizedMatrices } from '@/database/interface-model/normalized-matri
 import { IRankingMatrices } from '@/database/interface-model/ranking-matrices-entity.interface';
 import { IRecommendation } from '@/database/interface-model/recommendation-entity.interface';
 import {
-  BadRequestException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -537,9 +536,7 @@ export class RecommendationService {
             }),
           ) as INormalizedMatrices[],
         };
-      }
-
-      if (req.deleteAll === true) {
+      } else if (req.deleteAll === true) {
         const allMatrices = await this.normalizedMatrixRepository.find();
 
         if (allMatrices.length < 1) {
@@ -558,9 +555,7 @@ export class RecommendationService {
             }),
           ) as INormalizedMatrices[],
         };
-      }
-
-      if (normalizationMatrixId) {
+      } else {
         const foundNormalizedMatrix =
           await this.normalizedMatrixRepository.findOne({
             where: {
@@ -583,10 +578,6 @@ export class RecommendationService {
           }) as INormalizedMatrices,
         };
       }
-
-      throw new BadRequestException(
-        'No valid normalization or normalizations provided',
-      );
     } catch (err: unknown) {
       if (err instanceof Error) {
         throw new InternalServerErrorException(err.message);
@@ -626,9 +617,7 @@ export class RecommendationService {
             }),
           ) as IRankingMatrices[],
         };
-      }
-
-      if (req.deleteAll === true) {
+      } else if (req.deleteAll === true) {
         const allMatrices = await this.rankingMatricesRepository.find();
 
         if (allMatrices.length < 1) {
@@ -647,9 +636,7 @@ export class RecommendationService {
             }),
           ) as IRankingMatrices[],
         };
-      }
-
-      if (rankingMatrixId) {
+      } else {
         const foundRankingMatrix = await this.rankingMatricesRepository.findOne(
           {
             where: {
@@ -673,10 +660,6 @@ export class RecommendationService {
           }) as IRankingMatrices,
         };
       }
-
-      throw new BadRequestException(
-        'No valid rankingMatrixId or rankingMatrixIds provided',
-      );
     } catch (err: unknown) {
       if (err instanceof Error) {
         throw new InternalServerErrorException(err.message);
@@ -716,9 +699,7 @@ export class RecommendationService {
             }),
           ) as IRecommendation[],
         };
-      }
-
-      if (req?.deleteAll === true) {
+      } else if (req?.deleteAll === true) {
         const allRecommendations = await this.recommendationRepository.find();
 
         if (allRecommendations.length < 1) {
@@ -737,10 +718,7 @@ export class RecommendationService {
             }),
           ) as IRecommendation[],
         };
-      }
-
-      // Case: Delete single by ID (optional)
-      if (recommendationId) {
+      } else {
         const foundRecommendation = await this.recommendationRepository.findOne(
           {
             where: {
@@ -764,11 +742,6 @@ export class RecommendationService {
           }) as IRecommendation,
         };
       }
-
-      // If no valid input
-      throw new BadRequestException(
-        'No valid recommendationId, recommendationIds, or deleteAll provided',
-      );
     } catch (err: unknown) {
       if (err instanceof Error) {
         throw new InternalServerErrorException(err.message);
