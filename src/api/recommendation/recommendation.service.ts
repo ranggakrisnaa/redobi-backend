@@ -86,9 +86,17 @@ export class RecommendationService {
     await queryRunner.startTransaction();
 
     try {
-      await queryRunner.manager.clear(
-        this.normalizedMatrixRepository.metadata.target,
-      );
+      const foundAllNormalization =
+        await this.normalizedMatrixRepository.find();
+      if (foundAllNormalization.length) {
+        const normalizedIds = foundAllNormalization.map((n) => n.id);
+
+        await this.rankingNormalizedMatricesRepository.delete({
+          normalizedMatricesId: In(normalizedIds),
+        });
+
+        await this.normalizedMatrixRepository.delete(normalizedIds);
+      }
 
       const allAssessments = await this.assessmentRepository.find({
         relations: [
@@ -115,10 +123,10 @@ export class RecommendationService {
       for (const assessment of allAssessments) {
         if (!assessment.lecturer.tipePembimbing) {
           const hasValidLinear = assessment.assessmentSubCriteria.some(
-            (sub) => sub.subCriteria.name === 'Linear' && sub.score > 0,
+            (sub) => sub.subCriteria.name == 'Linear' && sub.score > 0,
           );
           const hasValidAsistenAhli = assessment.assessmentSubCriteria.some(
-            (sub) => sub.subCriteria.name === 'Asisten Ahli' && sub.score > 0,
+            (sub) => sub.subCriteria.name == 'Asisten Ahli' && sub.score > 0,
           );
 
           const tipe =
@@ -158,7 +166,7 @@ export class RecommendationService {
       for (const [subId, data] of subCriteriaScoresMap.entries()) {
         const { scores, type } = data;
         const value =
-          type === CriteriaTypeEnum.BENEFIT
+          type == CriteriaTypeEnum.BENEFIT
             ? Math.max(...scores)
             : Math.min(...scores);
         subCriteriaRefMap.set(subId, value);
@@ -506,17 +514,18 @@ export class RecommendationService {
 
   async DeleteNormalizationMatrix(
     normalizationMatrixId: string,
-    req: DeleteNormalizedMatrix,
+    req?: DeleteNormalizedMatrix,
   ): Promise<Record<string, INormalizedMatrices | INormalizedMatrices[]>> {
     try {
       if (
+        req?.normalizedMatrixIds &&
         Array.isArray(req.normalizedMatrixIds) &&
         req.normalizedMatrixIds.length > 0
       ) {
         const foundNormalizedMatrices =
           await this.normalizedMatrixRepository.find({
             where: {
-              id: In(req.normalizedMatrixIds),
+              lecturerId: In(req.normalizedMatrixIds),
             },
           });
 
@@ -524,7 +533,11 @@ export class RecommendationService {
           throw new NotFoundException('Recommendation not found');
         }
 
-        await this.normalizedMatrixRepository.delete(req.normalizedMatrixIds);
+        const newdMatrixIds = foundNormalizedMatrices.map((n) => n.id);
+        await this.rankingNormalizedMatricesRepository.delete({
+          normalizedMatricesId: In(newdMatrixIds),
+        });
+        await this.normalizedMatrixRepository.delete(newdMatrixIds);
 
         return {
           data: foundNormalizedMatrices.map((data, index) =>
@@ -536,14 +549,18 @@ export class RecommendationService {
             }),
           ) as INormalizedMatrices[],
         };
-      } else if (req.deleteAll === true) {
+      } else if (req.deleteAll == true) {
         const allMatrices = await this.normalizedMatrixRepository.find();
 
         if (allMatrices.length < 1) {
           throw new NotFoundException('No normalization matrices found');
         }
 
-        await this.normalizedMatrixRepository.clear();
+        const normalizedMatrixIds = allMatrices.map((n) => n.id);
+        await this.rankingNormalizedMatricesRepository.delete({
+          normalizedMatricesId: In(normalizedMatrixIds),
+        });
+        await this.normalizedMatrixRepository.delete(normalizedMatrixIds);
 
         return {
           data: allMatrices.map((data) =>
@@ -605,6 +622,9 @@ export class RecommendationService {
           throw new NotFoundException('Recommendation not found');
         }
 
+        await this.rankingNormalizedMatricesRepository.delete({
+          rankingMatricesId: In(req.rankingMatrixIds),
+        });
         await this.rankingMatricesRepository.delete(req.rankingMatrixIds);
 
         return {
@@ -617,14 +637,20 @@ export class RecommendationService {
             }),
           ) as IRankingMatrices[],
         };
-      } else if (req.deleteAll === true) {
+      } else if (req.deleteAll == true) {
         const allMatrices = await this.rankingMatricesRepository.find();
 
         if (allMatrices.length < 1) {
           throw new NotFoundException('No ranking matrices found');
         }
 
-        await this.rankingMatricesRepository.clear();
+        const rankingMatrixIds = allMatrices.map((n) => n.id);
+        await this.rankingNormalizedMatricesRepository.delete({
+          rankingMatricesId: In(rankingMatrixIds),
+        });
+        await this.rankingMatricesRepository.delete(
+          allMatrices.map((n) => n.id),
+        );
 
         return {
           data: allMatrices.map((data) =>
@@ -699,7 +725,7 @@ export class RecommendationService {
             }),
           ) as IRecommendation[],
         };
-      } else if (req?.deleteAll === true) {
+      } else if (req?.deleteAll == true) {
         const allRecommendations = await this.recommendationRepository.find();
 
         if (allRecommendations.length < 1) {
