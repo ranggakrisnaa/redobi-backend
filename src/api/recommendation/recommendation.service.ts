@@ -87,7 +87,6 @@ export class RecommendationService {
     await queryRunner.startTransaction();
 
     try {
-      // Hapus semua data normalisasi lama
       await queryRunner.manager.clear(
         this.normalizedMatrixRepository.metadata.target,
       );
