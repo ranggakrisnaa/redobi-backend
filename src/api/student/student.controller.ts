@@ -13,14 +13,12 @@ import {
   Post,
   Put,
   Query,
-  Res,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags } from '@nestjs/swagger';
-import { Response } from 'express';
 import { MulterService } from '../../multer/multer.service';
 import { JwtPayloadType } from '../auth/types/jwt-payload.type';
 import { CreateStudentDto } from './dto/create.dto';
@@ -52,16 +50,10 @@ export class StudentController {
     summary: 'Generate Template Excel',
   })
   @Get('templates')
-  async GenerateTemplateExcel(@Res() res: Response): Promise<void> {
-    const bufferFile = await this.studentService.GenerateTemplateExcel();
-
-    res.set({
-      'Content-Type':
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'Content-Disposition': 'attachment; filename=template_mahasiswa.xlsx',
-      'Content-Length': Buffer.byteLength(bufferFile),
-    });
-    res.send(bufferFile);
+  async GenerateTemplateExcel(): Promise<
+    Record<string, { supabaseUrl: string }>
+  > {
+    return await this.studentService.GenerateTemplateExcel();
   }
 
   @ApiAuth({

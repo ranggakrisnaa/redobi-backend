@@ -1,10 +1,11 @@
 import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
 import { Uuid } from '@/common/types/common.type';
 import { DEFAULT, INITIAL_VALUE } from '@/constants/app.constant';
+import { StorageFileType } from '@/database/enums/file-type.enum';
 import { ProdiEnum } from '@/database/enums/prodi.enum';
 import { TipePembimbingEnum } from '@/database/enums/tipe-pembimbing.enum';
 import { ILecturer } from '@/database/interface-model/lecturer-entity.interface';
-import { AwsService } from '@/libs/aws/aws.service';
+import { SupabaseService } from '@/libs/supabase/supabase.service';
 import {
   BadRequestException,
   ForbiddenException,
@@ -15,7 +16,8 @@ import {
 import * as ExcelJS from 'exceljs';
 import { ExcelJsService } from 'src/exceljs/excel-js.service';
 import { ColumnConfig } from 'src/exceljs/interface/excel-js.interface';
-import { In } from 'typeorm';
+import { In, Like } from 'typeorm';
+import { StorageUrlRepository } from '../storage-url/storage-url.repository';
 import { ErrHandleExcel } from '../student/types/error-handle-excel.type';
 import { CreateLecturerDto } from './dto/create.dto';
 import { DeleteLecturerDto } from './dto/delete.dto';
@@ -28,10 +30,13 @@ export class LecturerService {
   constructor(
     private readonly exceljsService: ExcelJsService,
     private readonly lecturerRepository: LecturerRepository,
-    private readonly awsService: AwsService,
+    private readonly supabaseService: SupabaseService,
+    private readonly storageUrlRepository: StorageUrlRepository,
   ) {}
 
-  async GenerateTemplateExcel(): Promise<ExcelJS.Buffer> {
+  async GenerateTemplateExcel(): Promise<
+    Record<string, { supabaseUrl: string }>
+  > {
     const columns = [
       { header: 'Nama dosen', key: 'fullName' },
       { header: 'NIDN', key: 'nidn' },
@@ -39,9 +44,27 @@ export class LecturerService {
       { header: 'Kuota Bimbingan', key: 'kotaBimbingan' },
       { header: 'Tipe Pembimbing', key: 'tipePembimbing' },
     ] as ColumnConfig[];
+    const fileName = 'template-dosen.xlsx';
 
     try {
-      return await this.exceljsService.generateExcel(columns, []);
+      const foundTemplate = await this.storageUrlRepository.findOne({
+        where: { fileUrl: Like(`%${fileName}%`) },
+      });
+      let urlNew: string;
+
+      if (!foundTemplate) {
+        const file = await this.exceljsService.generateExcel(columns, []);
+        const supabaseUrl = await this.supabaseService.uploadFile(
+          file as Buffer<ArrayBufferLike>,
+          fileName,
+        );
+        await this.storageUrlRepository.save({
+          fileUrl: supabaseUrl,
+          fileType: StorageFileType.EXCEL,
+        });
+        urlNew = supabaseUrl;
+      }
+      return { data: { supabaseUrl: foundTemplate.fileUrl ?? urlNew } };
     } catch (err: unknown) {
       if (err instanceof InternalServerErrorException)
         throw new InternalServerErrorException(
@@ -154,7 +177,10 @@ export class LecturerService {
     }
 
     if (file) {
-      imageUrl = await this.awsService.uploadFile(file);
+      imageUrl = await this.supabaseService.uploadFile(
+        file.buffer,
+        file.originalname,
+      );
     }
 
     const jumlahBimbingan = req.jumlahBimbingan ?? INITIAL_VALUE.NUMBER;
@@ -195,12 +221,14 @@ export class LecturerService {
     }
 
     if (foundLecturer.imageUrl) {
-      const key = this.awsService.extractKeyFromUrl(foundLecturer.imageUrl);
-      await this.awsService.deleteFile(key);
+      await this.supabaseService.deleteFile(foundLecturer.imageUrl);
     }
 
     if (file) {
-      imageUrl = await this.awsService.uploadFile(file);
+      imageUrl = await this.supabaseService.uploadFile(
+        file.buffer,
+        file.originalname,
+      );
     }
 
     const jumlahBimbingan =

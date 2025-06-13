@@ -7,6 +7,7 @@ import { Environment } from '@/constants/app.constant';
 import databaseConfig from '@/database/config/database.config';
 import { TypeOrmConfigService } from '@/database/typeorm-config.service';
 import awsConfig from '@/libs/aws/config/aws.config';
+import supabaseConfig from '@/libs/supabase/config/supabase.config';
 import mailConfig from '@/mail/config/mail.config';
 import { MailModule } from '@/mail/mail.module';
 import redisConfig from '@/redis/config/redis.config';
@@ -38,6 +39,7 @@ function generateModulesSet() {
         authConfig,
         mailConfig,
         awsConfig,
+        supabaseConfig,
       ],
       envFilePath: ['.env'],
     }),
@@ -99,7 +101,7 @@ function generateModulesSet() {
           __dirname,
           '../../src/generated/i18n.generated.ts',
         ),
-        logging: isLocal || isDevelopment, // log info on missing keys
+        logging: isLocal || isDevelopment,
       };
     },
     inject: [ConfigService],

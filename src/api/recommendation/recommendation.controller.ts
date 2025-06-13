@@ -3,7 +3,6 @@ import { INormalizedMatrices } from '@/database/interface-model/normalized-matri
 import { IRankingMatrices } from '@/database/interface-model/ranking-matrices-entity.interface';
 import { IRecommendation } from '@/database/interface-model/recommendation-entity.interface';
 import { ApiAuth } from '@/decorators/http.decorators';
-import { AuthGuard } from '@/guards/auth.guard';
 import {
   Body,
   Controller,
@@ -13,7 +12,6 @@ import {
   Post,
   Put,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { DeleteNormalizedMatrix } from '../normalized-matrix/dto/delete.dto';
@@ -28,7 +26,7 @@ import { RecommendationService } from './recommendation.service';
   path: 'recommendations',
   version: '1',
 })
-@UseGuards(AuthGuard)
+// @UseGuards(AuthGuard)
 export class RecommendationController {
   constructor(private readonly recommendationService: RecommendationService) {}
 
@@ -122,5 +120,14 @@ export class RecommendationController {
       recommendationId,
       req,
     );
+  }
+  @ApiAuth({
+    summary: 'Export Recommendation to PDF',
+  })
+  @Get('/pdf')
+  async ExportRecommendationToPDF(): Promise<
+    Record<string, { supabaseUrl: string }>
+  > {
+    return await this.recommendationService.ExportRecommendationToPDF();
   }
 }
