@@ -2,7 +2,6 @@ import { OffsetPaginationDto } from '@/common/dto/offset-pagination/offset-pagin
 import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
 import { RecommendationEntity } from '@/database/entities/reccomendation.entity';
 import { IRecommendation } from '@/database/interface-model/recommendation-entity.interface';
-import { toOrderEnum } from '@/utils/util';
 import { InjectRepository } from '@nestjs/typeorm';
 import { plainToInstance } from 'class-transformer';
 import { Repository, SelectQueryBuilder } from 'typeorm';
@@ -20,29 +19,47 @@ export class RecommendationRepository extends Repository<RecommendationEntity> {
     reqQuery: RecommendationPaginationReqQuery,
   ): Promise<OffsetPaginatedDto<IRecommendation>> {
     const targetName = this.repo.metadata.targetName;
-    const query = this.createQueryBuilder(targetName);
 
-    this.applyFilters(query, reqQuery, targetName)
-      .leftJoinAndSelect(`${targetName}.student`, 'student')
-      .leftJoinAndSelect(`${targetName}.lecturer`, 'lecturer');
+    const studentIdsQuery = this.repo
+      .createQueryBuilder(targetName)
+      .select(`${targetName}.studentId`, 'studentId')
+      .where(`${targetName}.studentId IS NOT NULL`)
+      .groupBy(`${targetName}.studentId`)
+      .limit(reqQuery.limit)
+      .offset(reqQuery.offset);
 
-    const sortField = [
-      { name: 'full_name', alias: `${targetName}.full_name` },
-      { name: 'created_at', alias: `${targetName}.createdAt` },
-    ].find((sort) => sort.name === reqQuery.sort);
-    if (sortField) {
-      query.orderBy(sortField.alias, toOrderEnum(reqQuery.order));
-    } else {
-      query.orderBy(`${targetName}.createdAt`, toOrderEnum(reqQuery.order));
+    const studentIdsRaw = await studentIdsQuery.getRawMany();
+    const studentIds = studentIdsRaw.map((row) => row.studentId);
+
+    if (studentIds.length === 0) {
+      const pagination = plainToInstance(
+        OffsetPaginationDto,
+        new OffsetPaginationDto(0, reqQuery),
+        { excludeExtraneousValues: true },
+      );
+      return { data: [], pagination };
     }
 
-    query.limit(reqQuery.limit).offset(reqQuery.offset);
+    const query = this.repo
+      .createQueryBuilder(targetName)
+      .leftJoinAndSelect(`${targetName}.student`, 'student')
+      .leftJoinAndSelect(`${targetName}.lecturer`, 'lecturer')
+      .where(`${targetName}.studentId IN (:...studentIds)`, { studentIds });
 
-    const [data, total] = await query.getManyAndCount();
+    this.applyFilters(query, reqQuery, targetName);
+    const data = await query.getMany();
+
+    const totalUniqueRaw = await this.repo
+      .createQueryBuilder(targetName)
+      .select(`${targetName}.studentId`)
+      .where(`${targetName}.studentId IS NOT NULL`)
+      .groupBy(`${targetName}.studentId`)
+      .getRawMany();
+    const totalUnique = totalUniqueRaw.length;
 
     const pagination = plainToInstance(
       OffsetPaginationDto,
-      new OffsetPaginationDto(total, reqQuery),
+      new OffsetPaginationDto(totalUnique, reqQuery),
       { excludeExtraneousValues: true },
     );
 

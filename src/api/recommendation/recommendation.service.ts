@@ -318,6 +318,7 @@ export class RecommendationService {
         { studentId: string; major: string; value: number }
       >();
 
+      // Calculate thesis keyword matching scores for students
       for (const student of foundAllStudents) {
         const foundThesisKeyword = await this.thesisKeywordRepository.findOne({
           where: {
@@ -352,63 +353,155 @@ export class RecommendationService {
           rank: index + 1,
         }));
 
-      const pembimbingTypes = [
-        TipePembimbingEnum.PEMBIMBING_SATU,
-        TipePembimbingEnum.PEMBIMBING_DUA,
-      ];
-
       const majors = [
         ThesisKeywordCategoryEnum.REKAYASA_PERANGKAT_LUNAK,
         ThesisKeywordCategoryEnum.SISTEM_CERDAS,
         ThesisKeywordCategoryEnum.MULTIMEDIA,
       ];
 
+      await this.recommendationRepository.delete({});
+
       for (const major of majors) {
         const filteredRanking = ranking.filter(
           (value) => value.major === major,
         );
 
-        const lecturersForMajor = foundAllRankings;
+        if (filteredRanking.length === 0) continue;
 
-        const numberOfLecturers = lecturersForMajor.length;
-        const studentsPerLecturer = Math.ceil(
-          filteredRanking.length / numberOfLecturers,
+        const allLecturers = foundAllRankings.map(
+          (ranking) => ranking.lecturer,
         );
 
+        const pembimbing1Lecturers = allLecturers.filter(
+          (lecturer) =>
+            lecturer.tipePembimbing === TipePembimbingEnum.PEMBIMBING_SATU,
+        );
+
+        const pembimbing2Lecturers = allLecturers.filter(
+          (lecturer) =>
+            lecturer.tipePembimbing === TipePembimbingEnum.PEMBIMBING_DUA,
+        );
+
+        const lecturerRankingMap = new Map();
+        foundAllRankings.forEach((ranking) => {
+          lecturerRankingMap.set(ranking.lecturer.id, ranking.finalScore || 0);
+        });
+
+        pembimbing1Lecturers.sort(
+          (a, b) =>
+            (lecturerRankingMap.get(b.id) || 0) -
+            (lecturerRankingMap.get(a.id) || 0),
+        );
+        pembimbing2Lecturers.sort(
+          (a, b) =>
+            (lecturerRankingMap.get(b.id) || 0) -
+            (lecturerRankingMap.get(a.id) || 0),
+        );
+
+        const lecturerAssignments = new Map<string, number>();
+
+        [...pembimbing1Lecturers, ...pembimbing2Lecturers].forEach(
+          (lecturer) => {
+            lecturerAssignments.set(lecturer.id, 0);
+          },
+        );
+
+        const maxStudentsPerPembimbing1 =
+          pembimbing1Lecturers.length > 0
+            ? Math.ceil(filteredRanking.length / pembimbing1Lecturers.length)
+            : 0;
+        const maxStudentsPerPembimbing2 =
+          pembimbing2Lecturers.length > 0
+            ? Math.ceil(filteredRanking.length / pembimbing2Lecturers.length)
+            : 0;
+
         for (const student of filteredRanking) {
-          for (const tipePembimbing of pembimbingTypes) {
-            let isAssigned = false;
+          let assigned = false;
 
-            for (const lecturer of lecturersForMajor.filter(
-              (data) => data.lecturer.tipePembimbing === tipePembimbing,
-            )) {
-              if (isAssigned) break;
+          for (const lecturer of pembimbing1Lecturers) {
+            const currentCount = lecturerAssignments.get(lecturer.id) || 0;
 
-              const currentLecturerStudentsCount =
-                await this.recommendationRepository.count({
-                  where: { lecturerId: lecturer.lecturer.id },
-                });
+            if (currentCount < maxStudentsPerPembimbing1) {
+              await this.recommendationRepository.save({
+                studentId: student.studentId,
+                lecturerId: lecturer.id,
+                recommendationScore: lecturerRankingMap.get(lecturer.id) || 0,
+                position: TipePembimbingEnum.PEMBIMBING_SATU,
+              });
 
-              if (currentLecturerStudentsCount < studentsPerLecturer) {
-                const existingRecommendation =
-                  await this.recommendationRepository.findOne({
-                    where: {
-                      studentId: student.studentId as Uuid,
-                      lecturerId: lecturer.lecturer.id,
-                    },
-                  });
-
-                if (!existingRecommendation) {
-                  await this.recommendationRepository.save({
-                    studentId: student.studentId,
-                    lecturerId: lecturer.lecturer.id,
-                    reccomendationScore: lecturer.finalScore,
-                  });
-
-                  isAssigned = true;
-                }
-              }
+              lecturerAssignments.set(lecturer.id, currentCount + 1);
+              assigned = true;
+              break;
             }
+          }
+
+          if (!assigned && pembimbing1Lecturers.length > 0) {
+            const leastLoadedLecturer = pembimbing1Lecturers.reduce(
+              (prev, curr) => {
+                const prevCount = lecturerAssignments.get(prev.id) || 0;
+                const currCount = lecturerAssignments.get(curr.id) || 0;
+                return prevCount <= currCount ? prev : curr;
+              },
+            );
+
+            await this.recommendationRepository.save({
+              studentId: student.studentId,
+              lecturerId: leastLoadedLecturer.id,
+              recommendationScore:
+                lecturerRankingMap.get(leastLoadedLecturer.id) || 0,
+              position: TipePembimbingEnum.PEMBIMBING_SATU,
+            });
+
+            const currentCount =
+              lecturerAssignments.get(leastLoadedLecturer.id) || 0;
+            lecturerAssignments.set(leastLoadedLecturer.id, currentCount + 1);
+          }
+        }
+
+        pembimbing2Lecturers.forEach((lecturer) => {
+          lecturerAssignments.set(lecturer.id, 0);
+        });
+
+        for (const student of filteredRanking) {
+          let assigned = false;
+
+          for (const lecturer of pembimbing2Lecturers) {
+            const currentCount = lecturerAssignments.get(lecturer.id) || 0;
+
+            if (currentCount < maxStudentsPerPembimbing2) {
+              await this.recommendationRepository.save({
+                studentId: student.studentId,
+                lecturerId: lecturer.id,
+                recommendationScore: lecturerRankingMap.get(lecturer.id) || 0,
+                position: TipePembimbingEnum.PEMBIMBING_DUA,
+              });
+
+              lecturerAssignments.set(lecturer.id, currentCount + 1);
+              assigned = true;
+              break;
+            }
+          }
+
+          if (!assigned && pembimbing2Lecturers.length > 0) {
+            const leastLoadedLecturer = pembimbing2Lecturers.reduce(
+              (prev, curr) => {
+                const prevCount = lecturerAssignments.get(prev.id) || 0;
+                const currCount = lecturerAssignments.get(curr.id) || 0;
+                return prevCount <= currCount ? prev : curr;
+              },
+            );
+
+            await this.recommendationRepository.save({
+              studentId: student.studentId,
+              lecturerId: leastLoadedLecturer.id,
+              recommendationScore:
+                lecturerRankingMap.get(leastLoadedLecturer.id) || 0,
+              position: TipePembimbingEnum.PEMBIMBING_DUA,
+            });
+
+            const currentCount =
+              lecturerAssignments.get(leastLoadedLecturer.id) || 0;
+            lecturerAssignments.set(leastLoadedLecturer.id, currentCount + 1);
           }
         }
       }

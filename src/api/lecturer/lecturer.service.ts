@@ -234,8 +234,13 @@ export class LecturerService {
   }
 
   async Detail(lecturerId: string): Promise<Record<string, ILecturer>> {
-    const foundLecturer = await this.lecturerRepository.findOneBy({
-      id: lecturerId as Uuid,
+    const foundLecturer = await this.lecturerRepository.findOne({
+      where: { id: lecturerId as Uuid },
+      relations: [
+        'recommendation',
+        'recommendation.student',
+        'recommendation.lecturer',
+      ],
     });
 
     if (!foundLecturer) {

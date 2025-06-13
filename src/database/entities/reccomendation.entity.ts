@@ -6,6 +6,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Uuid } from '../../common/types/common.type';
+import { TipePembimbingEnum } from '../enums/tipe-pembimbing.enum';
 import { ILecturer } from '../interface-model/lecturer-entity.interface';
 import { IRecommendation } from '../interface-model/recommendation-entity.interface';
 import { IStudent } from '../interface-model/student-entity.interface';
@@ -35,11 +36,14 @@ export class RecommendationEntity
     precision: 5,
     scale: 2,
     transformer: {
-      to: (value: number) => value.toFixed(2),
+      to: (value: number) => value,
       from: (value: string) => parseFloat(value),
     },
   })
   recommendationScore: number;
+
+  @Column({ type: 'enum', enum: TipePembimbingEnum, name: 'position' })
+  position: TipePembimbingEnum;
 
   @JoinColumn({
     name: 'student_id',

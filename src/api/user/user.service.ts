@@ -32,7 +32,7 @@ export class UserService {
     private readonly awsService: AwsService,
   ) {}
 
-  async Detail(userId: string): Promise<IUser> {
+  async Detail(userId: string): Promise<Record<string, IUser>> {
     const foundUser = await this.userRepository.findOneBy({
       id: userId as Uuid,
     });
@@ -40,7 +40,7 @@ export class UserService {
       throw new NotFoundException('User is not founds.');
     }
 
-    return foundUser;
+    return { data: foundUser };
   }
 
   async Update(req: UpdateUserDto, userId: string, file: Express.Multer.File) {

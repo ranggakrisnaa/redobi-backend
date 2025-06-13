@@ -108,9 +108,11 @@ export class StudentService {
   }
 
   async Detail(studentId: string): Promise<Record<string, IStudent>> {
-    const foundStudent = await this.studentRepository.findOneBy({
-      id: studentId as Uuid,
+    const foundStudent = await this.studentRepository.findOne({
+      where: { id: studentId as Uuid },
+      relations: ['recommendation', 'recommendation.lecturer'],
     });
+
     if (!foundStudent) {
       throw new NotFoundException('Student not found');
     }

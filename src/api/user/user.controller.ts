@@ -18,10 +18,15 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiTags } from '@nestjs/swagger';
 import { MulterService } from '../../multer/multer.service';
 import { UserService } from './user.service';
 
-@Controller('users')
+@ApiTags('users')
+@Controller({
+  path: 'users',
+  version: '1',
+})
 @UseGuards(AuthGuard)
 export class UserController {
   constructor(private readonly userService: UserService) {}
