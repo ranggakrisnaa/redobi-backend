@@ -25,7 +25,7 @@ export class RankingMatricesRepository extends Repository<RankingMatricesEntity>
       'lecturer',
     );
 
-    this.applyFilters(query, reqQuery, targetName);
+    this.applyFilters(query, reqQuery);
 
     const sortField = [
       { name: 'full_name', alias: `${targetName}.full_name` },
@@ -54,10 +54,10 @@ export class RankingMatricesRepository extends Repository<RankingMatricesEntity>
   private applyFilters(
     query: SelectQueryBuilder<RankingMatricesEntity>,
     req: RecommendationPaginationReqQuery,
-    targetName: string,
+    // targetName: string,
   ) {
     if (req.search) {
-      query.andWhere(`${targetName}.full_name ILIKE :search`, {
+      query.andWhere(`lecturer.full_name ILIKE :search`, {
         search: `%${req.search}%`,
       });
     }

@@ -86,4 +86,28 @@ export class LecturerRepository extends Repository<LecturerEntity> {
       id: In(lecturerIds),
     });
   }
+
+  async getTopLecturersByGuidance(limit: number = 4): Promise<any[]> {
+    const targetName = this.repo.metadata.targetName;
+    const query = this.repo
+      .createQueryBuilder(`${targetName}`)
+      .select([
+        `${targetName}.fullName as lecturer_name`,
+        'COUNT(student.id) as guidance_count',
+      ])
+      .leftJoin(`${targetName}.recommendation`, 'recommendation')
+      .leftJoin('recommendation.student', 'student')
+      .where('student.id IS NOT NULL')
+      .groupBy(`${targetName}.id`)
+      .addGroupBy(`${targetName}.fullName`)
+      .orderBy('COUNT(student.id)', 'DESC')
+      .limit(limit);
+
+    const result = await query.getRawMany();
+
+    return result.map((row) => ({
+      lecturerName: row.lecturer_name,
+      guidanceCount: parseInt(row.guidance_count, 10),
+    }));
+  }
 }

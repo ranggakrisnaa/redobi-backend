@@ -2,9 +2,11 @@ import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto
 import { Uuid } from '@/common/types/common.type';
 import { DEFAULT, INITIAL_VALUE } from '@/constants/app.constant';
 import { ClassEnum } from '@/database/enums/class.enum';
+import { StorageFileType } from '@/database/enums/file-type.enum';
 import { MajorEnum } from '@/database/enums/major.enum';
 import { IStudent } from '@/database/interface-model/student-entity.interface';
-import { AwsService } from '@/libs/aws/aws.service';
+import { SupabaseService } from '@/libs/supabase/supabase.service';
+import { getRelativeFilePath } from '@/utils/util';
 import {
   BadRequestException,
   ForbiddenException,
@@ -15,7 +17,8 @@ import {
 import * as ExcelJS from 'exceljs';
 import { ExcelJsService } from 'src/exceljs/excel-js.service';
 import { ColumnConfig } from 'src/exceljs/interface/excel-js.interface';
-import { In } from 'typeorm';
+import { In, Like } from 'typeorm';
+import { StorageUrlRepository } from '../storage-url/storage-url.repository';
 import { CreateStudentDto } from './dto/create.dto';
 import { DeleteStudentDto } from './dto/delete.dto';
 import { StudentPaginationReqQuery } from './dto/query.req.dto';
@@ -28,7 +31,8 @@ export class StudentService {
   constructor(
     private readonly studentRepository: StudentRepository,
     private readonly exceljsService: ExcelJsService,
-    private readonly awsService: AwsService,
+    private readonly supabaseService: SupabaseService,
+    private readonly storageUrlRepository: StorageUrlRepository,
   ) {}
 
   async Pagination(
@@ -51,7 +55,10 @@ export class StudentService {
     }
 
     if (file) {
-      imageUrl = await this.awsService.uploadFile(file);
+      imageUrl = await this.supabaseService.uploadFile(
+        file.buffer,
+        file.originalname,
+      );
     }
 
     try {
@@ -84,13 +91,19 @@ export class StudentService {
       throw new Error('Student not found');
     }
 
-    if (foundStudent.imageUrl) {
-      const key = this.awsService.extractKeyFromUrl(foundStudent.imageUrl);
-      await this.awsService.deleteFile(key);
+    if (
+      foundStudent.imageUrl &&
+      foundStudent.imageUrl !== DEFAULT.IMAGE_DEFAULT
+    ) {
+      const relativePath = getRelativeFilePath(foundStudent.imageUrl);
+      await this.supabaseService.deleteFile(relativePath);
     }
 
     if (file) {
-      imageUrl = await this.awsService.uploadFile(file);
+      imageUrl = await this.supabaseService.uploadFile(
+        file.buffer,
+        file.originalname,
+      );
     }
 
     try {
@@ -108,9 +121,11 @@ export class StudentService {
   }
 
   async Detail(studentId: string): Promise<Record<string, IStudent>> {
-    const foundStudent = await this.studentRepository.findOneBy({
-      id: studentId as Uuid,
+    const foundStudent = await this.studentRepository.findOne({
+      where: { id: studentId as Uuid },
+      relations: ['recommendation', 'recommendation.lecturer'],
     });
+
     if (!foundStudent) {
       throw new NotFoundException('Student not found');
     }
@@ -161,7 +176,9 @@ export class StudentService {
     }
   }
 
-  async GenerateTemplateExcel(): Promise<ExcelJS.Buffer> {
+  async GenerateTemplateExcel(): Promise<
+    Record<string, { supabaseUrl: string }>
+  > {
     const columns = [
       { header: 'Nama Mahasiswa', key: 'fullName' },
       { header: 'NIM', key: 'nim' },
@@ -171,9 +188,26 @@ export class StudentService {
       { header: 'Abstract', key: 'abstract' },
       { header: 'Kelas', key: 'class' },
     ] as ColumnConfig[];
+    const fileName = 'template-mahasiswa.xlsx';
 
     try {
-      return await this.exceljsService.generateExcel(columns, []);
+      const foundTemplate = await this.storageUrlRepository.findOne({
+        where: { fileUrl: Like(`%${fileName}%`) },
+      });
+      let urlNew: string;
+      if (!foundTemplate) {
+        const file = await this.exceljsService.generateExcel(columns, []);
+        const supabaseUrl = await this.supabaseService.uploadFile(
+          file as Buffer<ArrayBufferLike>,
+          fileName,
+        );
+        await this.storageUrlRepository.save({
+          fileUrl: supabaseUrl,
+          fileType: StorageFileType.EXCEL,
+        });
+        urlNew = supabaseUrl;
+      }
+      return { data: { supabaseUrl: foundTemplate?.fileUrl || urlNew } };
     } catch (err: unknown) {
       if (err instanceof InternalServerErrorException)
         throw new InternalServerErrorException(

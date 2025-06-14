@@ -7,6 +7,7 @@ import { HomeModule } from './home/home.module';
 import { LecturerModule } from './lecturer/lecturer.module';
 import { RecommendationModule } from './recommendation/recommendation.module';
 import { SessionModule } from './session/session.module';
+import { StatisticDataModule } from './statistic-data/statistic-data.module';
 import { StudentModule } from './student/student.module';
 import { ThesisKeywordModule } from './thesis-keyword/thesis-keyword.module';
 import { UserModule } from './user/user.module';
@@ -24,6 +25,7 @@ import { UserModule } from './user/user.module';
     AssessmentModule,
     ThesisKeywordModule,
     RecommendationModule,
+    StatisticDataModule,
   ],
 })
 export class ApiModule {}

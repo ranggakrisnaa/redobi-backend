@@ -11,8 +11,9 @@ import { Uuid } from '@/common/types/common.type';
 import { DEFAULT } from '@/constants/app.constant';
 import { JobName, QueueName } from '@/constants/job.constant';
 import { IUser } from '@/database/interface-model/user-entity.interface';
-import { AwsService } from '@/libs/aws/aws.service';
+import { SupabaseService } from '@/libs/supabase/supabase.service';
 import { hashPassword, verifyPassword } from '@/utils/password.util';
+import { getRelativeFilePath } from '@/utils/util';
 import { InjectQueue } from '@nestjs/bullmq';
 import {
   BadRequestException,
@@ -29,10 +30,10 @@ export class UserService {
     @InjectQueue(QueueName.EMAIL)
     private readonly emailQueue: Queue<IEmailJob, any, string>,
     private readonly authService: AuthService,
-    private readonly awsService: AwsService,
+    private readonly supabaseService: SupabaseService,
   ) {}
 
-  async Detail(userId: string): Promise<IUser> {
+  async Detail(userId: string): Promise<Record<string, IUser>> {
     const foundUser = await this.userRepository.findOneBy({
       id: userId as Uuid,
     });
@@ -40,31 +41,41 @@ export class UserService {
       throw new NotFoundException('User is not founds.');
     }
 
-    return foundUser;
+    return { data: foundUser };
   }
 
-  async Update(req: UpdateUserDto, userId: string, file: Express.Multer.File) {
-    let imageUrl = DEFAULT.IMAGE_DEFAULT;
+  async Update(req: UpdateUserDto, userId: string, file?: Express.Multer.File) {
     const foundUser = await this.userRepository.findOneBy({
       id: userId as Uuid,
     });
+
     if (!foundUser) {
       throw new NotFoundException('User is not found.');
     }
 
+    let imageUrl = foundUser.imageUrl ?? DEFAULT.IMAGE_DEFAULT;
+
+    if (file && imageUrl !== DEFAULT.IMAGE_DEFAULT) {
+      const relativePath = getRelativeFilePath(imageUrl);
+      await this.supabaseService.deleteFile(relativePath);
+    }
+
     if (file) {
-      imageUrl = await this.awsService.uploadFile(file);
+      imageUrl = await this.supabaseService.uploadFile(
+        file.buffer,
+        file.originalname,
+      );
     }
 
     try {
-      const data = await this.userRepository.save({
-        ...req,
+      const updatedUser = await this.userRepository.save({
         ...foundUser,
+        ...req,
         imageUrl,
       });
 
-      return UpdateUserDto.toPlainUser(data);
-    } catch (err: unknown) {
+      return UpdateUserDto.toPlainUser(updatedUser);
+    } catch (err) {
       throw new Error(err instanceof Error ? err.message : 'Unexpected error');
     }
   }

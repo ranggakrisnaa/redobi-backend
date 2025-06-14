@@ -13,15 +13,21 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiTags } from '@nestjs/swagger';
 import { MulterService } from '../../multer/multer.service';
 import { UserService } from './user.service';
 
-@Controller('users')
+@ApiTags('users')
+@Controller({
+  path: 'users',
+  version: '1',
+})
 @UseGuards(AuthGuard)
 export class UserController {
   constructor(private readonly userService: UserService) {}
@@ -45,7 +51,7 @@ export class UserController {
   }
 
   @ApiAuth()
-  @Post('update')
+  @Put('update')
   @UseInterceptors(
     FileInterceptor('file', new MulterService().multerImageOptions),
   )

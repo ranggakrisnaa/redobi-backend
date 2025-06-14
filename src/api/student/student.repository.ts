@@ -97,4 +97,33 @@ export class StudentRepository extends Repository<StudentEntity> {
       id: In(studentIds),
     });
   }
+
+  async getStudentGuidanceCount(): Promise<number> {
+    const targetName = this.repo.metadata.targetName;
+    return await this.repo
+      .createQueryBuilder(targetName)
+      .leftJoin(`${targetName}.recommendation`, 'recommendation')
+      .where('recommendation.id IS NOT NULL')
+      .getCount();
+  }
+
+  async getMajorTotal() {
+    const targetName = this.repo.metadata.targetName;
+
+    const query = this.repo
+      .createQueryBuilder(targetName)
+      .select([
+        `${targetName}.major as major`,
+        `COUNT(${targetName}.id) as major_count`,
+      ])
+      .groupBy(`${targetName}.major`)
+      .orderBy('major_count', 'DESC');
+
+    const result = await query.getRawMany();
+
+    return result.map((row) => ({
+      major: row.major,
+      major_count: parseInt(row.major_count, 10),
+    }));
+  }
 }

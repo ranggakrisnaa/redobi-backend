@@ -5,6 +5,7 @@ import { QueueName, QueuePrefix } from '@/constants/job.constant';
 import { SessionEntity } from '@/database/entities/session.entity';
 import { UserEntity } from '@/database/entities/user.entity';
 import { AwsService } from '@/libs/aws/aws.service';
+import { SupabaseService } from '@/libs/supabase/supabase.service';
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -33,6 +34,7 @@ import { UserService } from './user.service';
     UserRepository,
     AuthService,
     AwsService,
+    SupabaseService,
   ],
 })
 export class UserModule {}
