@@ -9,7 +9,9 @@ import { INormalizedMatrices } from '@/database/interface-model/normalized-matri
 import { IRankingMatrices } from '@/database/interface-model/ranking-matrices-entity.interface';
 import { IRecommendation } from '@/database/interface-model/recommendation-entity.interface';
 import { SupabaseService } from '@/libs/supabase/supabase.service';
+import { getRelativeFilePath } from '@/utils/util';
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -545,21 +547,47 @@ export class RecommendationService {
   ): Promise<Record<string, IRecommendation | IRecommendation[]>> {
     try {
       if (!recommendationId) {
+        const { recommendationIds, lecturerIds, studentIds } = req;
+
+        if (
+          !Array.isArray(recommendationIds) ||
+          !Array.isArray(lecturerIds) ||
+          !Array.isArray(studentIds) ||
+          recommendationIds.length !== lecturerIds.length ||
+          recommendationIds.length !== studentIds.length
+        ) {
+          throw new BadRequestException(
+            'Recommendation IDs, Lecturer IDs, and Student IDs are required and must have the same length.',
+          );
+        }
+
         const foundRecommendations = await this.recommendationRepository.find({
           where: {
-            id: In(req.recommendationIds),
+            id: In(recommendationIds),
           },
         });
 
         if (!foundRecommendations.length) {
-          throw new NotFoundException('Reccomendation not found');
+          throw new NotFoundException('Recommendations not found');
         }
 
-        const mappedRecommendations = foundRecommendations.map(
-          (recommendation: IRecommendation, index: number) => ({
-            ...recommendation,
-            lecturerId: req.lecturerIds[index],
-            studentId: req.studentIds[index],
+        const mappedRecommendations = await Promise.all(
+          foundRecommendations.map(async (recommendation) => {
+            const index = recommendationIds.indexOf(recommendation.id);
+            if (index === -1) return recommendation;
+            const foundRankingMatrix =
+              await this.rankingMatricesRepository.findOne({
+                where: { lecturerId: lecturerIds[index] as Uuid },
+              });
+
+            return {
+              ...recommendation,
+              lecturerId: lecturerIds[index],
+              studentId: studentIds[index],
+              recommendationScore: foundRankingMatrix?.finalScore
+                ? foundRankingMatrix?.finalScore
+                : 0,
+            };
           }),
         );
 
@@ -568,14 +596,14 @@ export class RecommendationService {
         );
 
         return {
-          data: updated.map((data, index) =>
+          data: updated.map((data) =>
             UpdateRecommendationDto.toResponse({
-              id: req.recommendationIds[index] as Uuid,
+              id: data.id,
               createdAt: data.createdAt,
               updatedAt: data.updatedAt,
               deletedAt: data.deletedAt,
             }),
-          ) as unknown as IRecommendation[],
+          ) as IRecommendation[],
         };
       } else {
         const foundReccomendation = await this.recommendationRepository.findOne(
@@ -803,7 +831,7 @@ export class RecommendationService {
       ) {
         const foundRecommendations = await this.recommendationRepository.find({
           where: {
-            id: In(req.recommendationIds),
+            studentId: In(req.recommendationIds),
           },
         });
 
@@ -811,7 +839,9 @@ export class RecommendationService {
           throw new NotFoundException('Recommendation not found');
         }
 
-        await this.recommendationRepository.delete(req.recommendationIds);
+        const recommendationIds = foundRecommendations.map((r) => r.id);
+
+        await this.recommendationRepository.delete(recommendationIds);
 
         return {
           data: foundRecommendations.map((data, index) =>
@@ -874,11 +904,6 @@ export class RecommendationService {
     }
   }
 
-  private getRelativeFilePath(url: string): string {
-    const path = url.split('/object/public/')[1];
-    return path.replace(/^\/+/, '');
-  }
-
   async ExportRecommendationToPDF(): Promise<
     Record<string, { supabaseUrl: string }>
   > {
@@ -919,9 +944,9 @@ export class RecommendationService {
     let supabaseUrl: string;
 
     if (foundTemplate) {
-      await this.supabaseService.deleteFile(
-        this.getRelativeFilePath(foundTemplate?.fileUrl),
-      );
+      const relativePath = getRelativeFilePath(foundTemplate.fileUrl);
+
+      await this.supabaseService.deleteFile(relativePath);
       await this.storageUrlRepository.delete(foundTemplate.id);
     }
     supabaseUrl = await this.supabaseService.uploadFile(

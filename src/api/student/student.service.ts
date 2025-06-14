@@ -6,6 +6,7 @@ import { StorageFileType } from '@/database/enums/file-type.enum';
 import { MajorEnum } from '@/database/enums/major.enum';
 import { IStudent } from '@/database/interface-model/student-entity.interface';
 import { SupabaseService } from '@/libs/supabase/supabase.service';
+import { getRelativeFilePath } from '@/utils/util';
 import {
   BadRequestException,
   ForbiddenException,
@@ -90,8 +91,12 @@ export class StudentService {
       throw new Error('Student not found');
     }
 
-    if (foundStudent.imageUrl) {
-      await this.supabaseService.deleteFile(foundStudent.imageUrl);
+    if (
+      foundStudent.imageUrl &&
+      foundStudent.imageUrl !== DEFAULT.IMAGE_DEFAULT
+    ) {
+      const relativePath = getRelativeFilePath(foundStudent.imageUrl);
+      await this.supabaseService.deleteFile(relativePath);
     }
 
     if (file) {
@@ -202,7 +207,7 @@ export class StudentService {
         });
         urlNew = supabaseUrl;
       }
-      return { data: { supabaseUrl: foundTemplate.fileUrl ?? urlNew } };
+      return { data: { supabaseUrl: foundTemplate?.fileUrl || urlNew } };
     } catch (err: unknown) {
       if (err instanceof InternalServerErrorException)
         throw new InternalServerErrorException(

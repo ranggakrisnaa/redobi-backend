@@ -13,6 +13,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -50,7 +51,7 @@ export class UserController {
   }
 
   @ApiAuth()
-  @Post('update')
+  @Put('update')
   @UseInterceptors(
     FileInterceptor('file', new MulterService().multerImageOptions),
   )

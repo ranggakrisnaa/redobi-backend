@@ -46,7 +46,7 @@ export class RecommendationRepository extends Repository<RecommendationEntity> {
       .leftJoinAndSelect(`${targetName}.lecturer`, 'lecturer')
       .where(`${targetName}.studentId IN (:...studentIds)`, { studentIds });
 
-    this.applyFilters(query, reqQuery, targetName);
+    this.applyFilters(query, reqQuery);
     const data = await query.getMany();
 
     const totalUniqueRaw = await this.repo
@@ -68,9 +68,17 @@ export class RecommendationRepository extends Repository<RecommendationEntity> {
 
   private applyFilters(
     query: SelectQueryBuilder<RecommendationEntity>,
-    _req: RecommendationPaginationReqQuery,
-    _targetName: string,
+    req: RecommendationPaginationReqQuery,
+    // targetName: string,
   ) {
+    if (req.search) {
+      query.andWhere(
+        'lecturer.full_name ILIKE :search OR student.full_name ILIKE :search',
+        {
+          search: `%${req.search}%`,
+        },
+      );
+    }
     return query;
   }
 }

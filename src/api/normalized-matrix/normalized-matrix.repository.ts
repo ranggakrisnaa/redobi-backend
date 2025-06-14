@@ -24,7 +24,7 @@ export class NormalizedMatrixRepository extends Repository<NormalizedMatricesEnt
       .leftJoinAndSelect(`${targetName}.lecturer`, 'lecturer')
       .leftJoinAndSelect(`${targetName}.criteria`, 'criteria');
 
-    this.applyFilters(query, reqQuery, targetName);
+    this.applyFilters(query, reqQuery);
 
     const sortField = [
       { name: 'full_name', alias: `${targetName}.full_name` },
@@ -52,12 +52,15 @@ export class NormalizedMatrixRepository extends Repository<NormalizedMatricesEnt
   private applyFilters(
     query: SelectQueryBuilder<NormalizedMatricesEntity>,
     req: RecommendationPaginationReqQuery,
-    targetName: string,
+    // targetName: string,
   ) {
     if (req.search) {
-      query.andWhere(`${targetName}.full_name ILIKE :search`, {
-        search: `%${req.search}%`,
-      });
+      query.andWhere(
+        `lecturer.full_name ILIKE :search OR criteria.name ILIKE :search`,
+        {
+          search: `%${req.search}%`,
+        },
+      );
     }
 
     return query;

@@ -11,10 +11,10 @@ export class UpdateUserDto {
   fullName: string;
 
   @StringField()
-  username: string;
+  email: string;
 
   @StringField()
-  imageUrl: string;
+  username: string;
 
   static toPlainUser(data: UpdateUserDto): Partial<UpdateUserDto> {
     return {

@@ -6,6 +6,7 @@ import { ProdiEnum } from '@/database/enums/prodi.enum';
 import { TipePembimbingEnum } from '@/database/enums/tipe-pembimbing.enum';
 import { ILecturer } from '@/database/interface-model/lecturer-entity.interface';
 import { SupabaseService } from '@/libs/supabase/supabase.service';
+import { getRelativeFilePath } from '@/utils/util';
 import {
   BadRequestException,
   ForbiddenException,
@@ -64,7 +65,7 @@ export class LecturerService {
         });
         urlNew = supabaseUrl;
       }
-      return { data: { supabaseUrl: foundTemplate.fileUrl ?? urlNew } };
+      return { data: { supabaseUrl: foundTemplate?.fileUrl || urlNew } };
     } catch (err: unknown) {
       if (err instanceof InternalServerErrorException)
         throw new InternalServerErrorException(
@@ -220,8 +221,12 @@ export class LecturerService {
       throw new NotFoundException('Lecturer not found');
     }
 
-    if (foundLecturer.imageUrl) {
-      await this.supabaseService.deleteFile(foundLecturer.imageUrl);
+    if (
+      foundLecturer.imageUrl &&
+      foundLecturer.imageUrl !== DEFAULT.IMAGE_DEFAULT
+    ) {
+      const relativePath = getRelativeFilePath(foundLecturer.imageUrl);
+      await this.supabaseService.deleteFile(relativePath);
     }
 
     if (file) {

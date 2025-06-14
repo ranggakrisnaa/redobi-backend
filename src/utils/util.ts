@@ -6,3 +6,8 @@ export function toOrderEnum(order?: string): OrderDirectionEnum {
   }
   return OrderDirectionEnum.Desc;
 }
+
+export function getRelativeFilePath(url: string): string {
+  const path = url.split('/object/public/')[1];
+  return path.replace(/^redobi\//, '');
+}
