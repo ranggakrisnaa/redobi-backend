@@ -6,7 +6,7 @@
   "private": true,
   "license": "MIT",
   "scripts": {
-    "build": "nest build && cp -r src/assets dist/assets",
+    "build": "nest build",
     "start": "node dist/main.js",
     "start:dev": "nest start --watch",
     "heroku-postbuild": "pnpm install && pnpm run build",
