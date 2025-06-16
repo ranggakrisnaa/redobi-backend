@@ -85,9 +85,12 @@ export class LecturerEntity extends AbstractEntity implements ILecturer {
   @OneToMany(
     () => NormalizedMatricesEntity,
     (normalized) => normalized.lecturer,
+    { onDelete: 'CASCADE' },
   )
   normalizedMatrices?: INormalizedMatrices[];
 
-  @OneToMany(() => RankingMatricesEntity, (ranking) => ranking.lecturer)
+  @OneToMany(() => RankingMatricesEntity, (ranking) => ranking.lecturer, {
+    onDelete: 'CASCADE',
+  })
   rankingMatrices?: IRankingMatrices[];
 }

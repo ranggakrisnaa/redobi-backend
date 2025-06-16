@@ -11,3 +11,7 @@ export function getRelativeFilePath(url: string): string {
   const path = url.split('/object/public/')[1];
   return path.replace(/^redobi\//, '');
 }
+
+export function roundToThreeDecimals(value: number): number {
+  return Math.round(value * 1000) / 1000;
+}

@@ -17,7 +17,7 @@ import {
 import * as ExcelJS from 'exceljs';
 import { ExcelJsService } from 'src/exceljs/excel-js.service';
 import { ColumnConfig } from 'src/exceljs/interface/excel-js.interface';
-import { In, Like } from 'typeorm';
+import { In, Like, QueryFailedError } from 'typeorm';
 import { StorageUrlRepository } from '../storage-url/storage-url.repository';
 import { ErrHandleExcel } from '../student/types/error-handle-excel.type';
 import { CreateLecturerDto } from './dto/create.dto';
@@ -287,6 +287,9 @@ export class LecturerService {
     lecturerId: string,
     req: DeleteLecturerDto,
   ): Promise<Record<string, ILecturer | ILecturer[]>> {
+    const queryRunner =
+      this.lecturerRepository.manager.connection.createQueryRunner();
+
     try {
       if (Array.isArray(req?.lecturerIds) && req.lecturerIds.length > 0) {
         const foundLecturers = await this.lecturerRepository.findBy({
@@ -294,10 +297,73 @@ export class LecturerService {
         });
 
         if (!foundLecturers.length) {
-          throw new NotFoundException('Lecturer data found.');
+          throw new NotFoundException('Lecturer data not found.');
         }
 
-        await this.lecturerRepository.bulkDelete(req.lecturerIds);
+        if (foundLecturers.length !== req.lecturerIds.length) {
+          const foundIds = foundLecturers.map((l) => l.id);
+          const notFoundIds = req.lecturerIds.filter(
+            (id) => !foundIds.includes(id as Uuid),
+          );
+          throw new NotFoundException(
+            `Some lecturers not found: ${notFoundIds.join(', ')}`,
+          );
+        }
+
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
+        try {
+          await queryRunner.query(
+            `DELETE FROM ranking_normalized_matrices 
+             WHERE ranking_matrices_id IN (
+               SELECT id FROM ranking_matrices WHERE lecturer_id = ANY($1)
+             )`,
+            [req.lecturerIds],
+          );
+
+          await queryRunner.query(
+            `DELETE FROM ranking_matrices 
+             WHERE lecturer_id = ANY($1)`,
+            [req.lecturerIds],
+          );
+
+          await queryRunner.query(
+            `DELETE FROM normalized_matrices 
+             WHERE lecturer_id = ANY($1)`,
+            [req.lecturerIds],
+          );
+
+          await queryRunner.query(
+            `DELETE FROM ranking_normalized_matrices 
+             WHERE normalized_matrices_id IN (
+               SELECT id FROM normalized_matrices WHERE lecturer_id = ANY($1)
+             )`,
+            [req.lecturerIds],
+          );
+
+          await queryRunner.query(
+            `DELETE FROM assessment_sub_criteria 
+             WHERE assessment_id IN (
+               SELECT id FROM assessments WHERE lecturer_id = ANY($1)
+             )`,
+            [req.lecturerIds],
+          );
+
+          await queryRunner.query(
+            `DELETE FROM assessments WHERE lecturer_id = ANY($1)`,
+            [req.lecturerIds],
+          );
+
+          await queryRunner.query(`DELETE FROM lecturers WHERE id = ANY($1)`, [
+            req.lecturerIds,
+          ]);
+
+          await queryRunner.commitTransaction();
+        } catch (error) {
+          await queryRunner.rollbackTransaction();
+          throw error;
+        }
 
         return {
           data: foundLecturers.map((lecturer) =>
@@ -312,18 +378,62 @@ export class LecturerService {
         if (!foundLecturer) {
           throw new NotFoundException('Lecturer not found');
         }
-        await this.lecturerRepository.delete(foundLecturer.id);
+
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
+        try {
+          await queryRunner.query(
+            `DELETE FROM ranking_matrices WHERE lecturer_id = $1`,
+            [lecturerId],
+          );
+          await queryRunner.query(
+            `DELETE FROM assessment_sub_criteria 
+             WHERE assessment_id IN (
+               SELECT id FROM assessments WHERE lecturer_id = $1
+             )`,
+            [lecturerId],
+          );
+
+          await queryRunner.query(
+            `DELETE FROM assessments WHERE lecturer_id = $1`,
+            [lecturerId],
+          );
+
+          await queryRunner.query(`DELETE FROM lecturers WHERE id = $1`, [
+            lecturerId,
+          ]);
+
+          await queryRunner.commitTransaction();
+        } catch (error) {
+          await queryRunner.rollbackTransaction();
+          throw error;
+        }
+
         return {
           data: CreateLecturerDto.toResponse(foundLecturer) as ILecturer,
         };
       }
     } catch (err: unknown) {
-      if (err instanceof InternalServerErrorException)
+      if (err instanceof NotFoundException) {
+        throw err;
+      }
+
+      if (err instanceof QueryFailedError) {
+        throw new BadRequestException(`Database error: ${err.message}`);
+      }
+
+      if (err instanceof InternalServerErrorException) {
         throw new InternalServerErrorException(
           err instanceof Error ? err.message : 'Unexpected error',
         );
+      }
 
-      throw err;
+      throw new InternalServerErrorException(
+        err instanceof Error ? err.message : 'Unexpected error occurred',
+      );
+    } finally {
+      await queryRunner.release();
     }
   }
 }

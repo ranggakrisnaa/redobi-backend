@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddStorageUrls1749826524037 implements MigrationInterface {
-  name = 'AddStorageUrls1749826524037';
+export class AddCascade1750004430820 implements MigrationInterface {
+  name = 'AddCascade1750004430820';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`

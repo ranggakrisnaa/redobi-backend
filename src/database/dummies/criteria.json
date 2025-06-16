@@ -25,11 +25,11 @@
     "subCriteria": [
       {
         "name": "Non-Linear",
-        "weight": 0.075
+        "weight": 0.07
       },
       {
         "name": "Linear",
-        "weight": 0.175
+        "weight": 0.17
       }
     ]
   },
@@ -56,7 +56,7 @@
       },
       {
         "name": "Prefesor",
-        "weight": 0.05
+        "weight": 0.06
       }
     ]
   },
@@ -67,11 +67,11 @@
     "subCriteria": [
       {
         "name": "Sistem Komputer",
-        "weight": 0.075
+        "weight": 0.07
       },
       {
         "name": "Teknik Informatika",
-        "weight": 0.075
+        "weight": 0.09
       }
     ]
   },
@@ -82,11 +82,11 @@
     "subCriteria": [
       {
         "name": "Sistem Komputer",
-        "weight": 0.005
+        "weight": 0.4
       },
       {
         "name": "Teknik Informatika",
-        "weight": 0.005
+        "weight": 0.6
       }
     ]
   }

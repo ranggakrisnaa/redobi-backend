@@ -97,11 +97,9 @@ export class RecommendationService {
         await this.normalizedMatrixRepository.find();
       if (foundAllNormalization.length) {
         const normalizedIds = foundAllNormalization.map((n) => n.id);
-
         await this.rankingNormalizedMatricesRepository.delete({
           normalizedMatricesId: In(normalizedIds),
         });
-
         await this.normalizedMatrixRepository.delete(normalizedIds);
       }
 
@@ -120,20 +118,15 @@ export class RecommendationService {
         },
       });
 
-      const subCriteriaScoresMap = new Map<
-        number,
-        { scores: number[]; type: CriteriaTypeEnum }
-      >();
-
       const lecturersToUpdate = [];
-
       for (const assessment of allAssessments) {
         if (!assessment.lecturer.tipePembimbing) {
           const hasValidLinear = assessment.assessmentSubCriteria.some(
-            (sub) => sub.subCriteria.name == 'Linear' && sub.score > 0,
+            (sub) => sub.subCriteria.name === 'Linear' && sub.score === 100,
           );
           const hasValidAsistenAhli = assessment.assessmentSubCriteria.some(
-            (sub) => sub.subCriteria.name == 'Asisten Ahli' && sub.score > 0,
+            (sub) =>
+              sub.subCriteria.name === 'Asisten Ahli' && sub.score === 100,
           );
 
           const tipe =
@@ -146,20 +139,6 @@ export class RecommendationService {
             tipePembimbing: tipe,
           });
         }
-
-        for (const sub of assessment.assessmentSubCriteria) {
-          const subId = sub.subCriteriaId;
-          const criteriaType = sub.subCriteria.criteria.type;
-
-          if (!subCriteriaScoresMap.has(subId)) {
-            subCriteriaScoresMap.set(subId, {
-              scores: [],
-              type: criteriaType,
-            });
-          }
-
-          subCriteriaScoresMap.get(subId).scores.push(sub.score);
-        }
       }
 
       if (lecturersToUpdate.length > 0) {
@@ -169,60 +148,126 @@ export class RecommendationService {
         );
       }
 
-      const subCriteriaRefMap = new Map<number, number>();
-      for (const [subId, data] of subCriteriaScoresMap.entries()) {
-        const { scores, type } = data;
-        const value =
-          type == CriteriaTypeEnum.BENEFIT
-            ? Math.max(...scores)
-            : Math.min(...scores);
-        subCriteriaRefMap.set(subId, value);
-      }
-
-      const groupedNormalizedValues = new Map<string, number[]>();
-      const entryToGroupKey = new Map<
-        string,
-        { lecturerId: string; criteriaId: number }
+      const subCriteriaScoresMap = new Map<
+        number,
+        {
+          scores: number[];
+          type: CriteriaTypeEnum;
+          name: string;
+          weight: number;
+          criteriaId: number;
+          criteriaName: string;
+        }
       >();
+
+      const lecturerSubCriteriaData = [];
 
       for (const assessment of allAssessments) {
         for (const sub of assessment.assessmentSubCriteria) {
-          const criteria = sub.subCriteria.criteria;
-          const refValue = subCriteriaRefMap.get(sub.subCriteriaId) || 1;
-          const key = `${assessment.lecturerId}-${criteria.id}`;
+          const subId = sub.subCriteriaId;
+          const criteriaType = sub.subCriteria.criteria.type;
+          const subCriteriaWeight = sub.subCriteria.weight || 0;
 
-          let normalizedScore = 0;
-          if (criteria.type === CriteriaTypeEnum.BENEFIT) {
-            normalizedScore = refValue > 0 ? sub.score / refValue : 0;
-          } else {
-            normalizedScore = sub.score > 0 ? refValue / sub.score : 0;
-          }
-
-          if (!groupedNormalizedValues.has(key)) {
-            groupedNormalizedValues.set(key, []);
-          }
-          groupedNormalizedValues.get(key).push(normalizedScore);
-
-          entryToGroupKey.set(key, {
+          lecturerSubCriteriaData.push({
             lecturerId: assessment.lecturerId,
-            criteriaId: criteria.id,
+            lecturerName: assessment.lecturer.fullName,
+            subCriteriaId: subId,
+            subCriteriaName: sub.subCriteria.name,
+            score: sub.score,
+            weight: subCriteriaWeight,
+            criteriaId: sub.subCriteria.criteria.id,
+            criteriaName: sub.subCriteria.criteria.name,
+            criteriaType: criteriaType,
           });
+
+          if (!subCriteriaScoresMap.has(subId)) {
+            subCriteriaScoresMap.set(subId, {
+              scores: [],
+              type: criteriaType,
+              name: sub.subCriteria.name,
+              weight: subCriteriaWeight,
+              criteriaId: sub.subCriteria.criteria.id,
+              criteriaName: sub.subCriteria.criteria.name,
+            });
+          }
+
+          subCriteriaScoresMap.get(subId).scores.push(sub.score);
         }
       }
+      console.log(lecturerSubCriteriaData);
 
-      const bulkInsertData = [];
+      const subCriteriaRefMap = new Map<number, number>();
 
-      for (const [key, scoreList] of groupedNormalizedValues.entries()) {
-        const { lecturerId, criteriaId } = entryToGroupKey.get(key);
-        const avgScore =
-          scoreList.reduce((acc, val) => acc + val, 0) / scoreList.length;
+      for (const [subId, data] of subCriteriaScoresMap.entries()) {
+        const { scores, type, name } = data;
+        const refValue =
+          type === CriteriaTypeEnum.BENEFIT
+            ? Math.max(...scores)
+            : Math.min(...scores);
 
-        bulkInsertData.push({
-          lecturerId,
-          criteriaId,
-          normalizedValue: avgScore,
+        subCriteriaRefMap.set(subId, refValue);
+        console.log(
+          `${name} (${type}): [${scores.join(', ')}] => Ref: ${refValue}`,
+        );
+      }
+
+      const normalizedSubCriteriaData = [];
+
+      for (const data of lecturerSubCriteriaData) {
+        const refValue = subCriteriaRefMap.get(data.subCriteriaId);
+        let normalizedScore = 0;
+
+        if (data.criteriaType === CriteriaTypeEnum.BENEFIT) {
+          normalizedScore = refValue > 0 ? data.score / refValue : 0;
+        } else {
+          normalizedScore = data.score > 0 ? refValue / data.score : 0;
+        }
+
+        normalizedSubCriteriaData.push({
+          ...data,
+          normalizedScore,
         });
       }
+
+      const criteriaWeightedScores = new Map<
+        string,
+        {
+          lecturerId: string;
+          lecturerName: string;
+          criteriaId: number;
+          criteriaName: string;
+          totalWeightedScore: number;
+        }
+      >();
+
+      for (const data of normalizedSubCriteriaData) {
+        const weightedNormalizedScore = data.normalizedScore * data.weight;
+        console.log(weightedNormalizedScore, 'WEIGHT SCOREE =============');
+
+        const key = `${data.lecturerId}-${data.criteriaId}`;
+
+        if (!criteriaWeightedScores.has(key)) {
+          criteriaWeightedScores.set(key, {
+            lecturerId: data.lecturerId,
+            lecturerName: data.lecturerName,
+            criteriaId: data.criteriaId,
+            criteriaName: data.criteriaName,
+            totalWeightedScore: 0,
+          });
+        }
+
+        const existing = criteriaWeightedScores.get(key);
+        existing.totalWeightedScore += weightedNormalizedScore;
+      }
+      console.log(Array.from(criteriaWeightedScores.values()));
+
+      const bulkInsertData = Array.from(criteriaWeightedScores.values()).map(
+        (entry) => ({
+          lecturerId: entry.lecturerId,
+          criteriaId: entry.criteriaId,
+          normalizedValue: entry.totalWeightedScore,
+        }),
+      );
 
       if (bulkInsertData.length > 0) {
         await queryRunner.manager.insert(
@@ -234,7 +279,8 @@ export class RecommendationService {
       await queryRunner.commitTransaction();
 
       return {
-        message: 'Matrix normalization created successfully.',
+        message:
+          'Matrix normalization with correct SAW calculation (summed per criteria) created successfully.',
       };
     } catch (err) {
       await queryRunner.rollbackTransaction();
