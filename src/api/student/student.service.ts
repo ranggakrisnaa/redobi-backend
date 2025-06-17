@@ -132,12 +132,17 @@ export class StudentService {
 
     return { data: foundStudent };
   }
-
   async Delete(
     studentId: string,
     req: DeleteStudentDto,
   ): Promise<Record<string, IStudent | IStudent[]>> {
+    const queryRunner =
+      this.studentRepository.manager.connection.createQueryRunner();
+
     try {
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+
       if (Array.isArray(req?.studentIds) && req.studentIds.length > 0) {
         const foundStudents = await this.studentRepository.findBy({
           id: In(req.studentIds),
@@ -147,13 +152,27 @@ export class StudentService {
           throw new NotFoundException('Student not found');
         }
 
-        await this.studentRepository.bulkDelete(req.studentIds);
+        try {
+          await queryRunner.query(
+            `DELETE FROM recommendations WHERE student_id = ANY($1)`,
+            [req.studentIds],
+          );
 
-        return {
-          data: foundStudents.map((student) =>
-            CreateStudentDto.toResponse(student),
-          ) as IStudent[],
-        };
+          await queryRunner.query(`DELETE FROM students WHERE id = ANY($1)`, [
+            req.studentIds,
+          ]);
+
+          await queryRunner.commitTransaction();
+
+          return {
+            data: foundStudents.map((student) =>
+              CreateStudentDto.toResponse(student),
+            ) as IStudent[],
+          };
+        } catch (error) {
+          await queryRunner.rollbackTransaction();
+          throw error;
+        }
       } else {
         const foundStudent = await this.studentRepository.findOneBy({
           id: studentId as Uuid,
@@ -163,8 +182,25 @@ export class StudentService {
           throw new NotFoundException('Student not found');
         }
 
-        await this.studentRepository.delete(foundStudent.id);
-        return { data: CreateStudentDto.toResponse(foundStudent) as IStudent };
+        try {
+          await queryRunner.query(
+            `DELETE FROM recommendations WHERE student_id = $1`,
+            [studentId],
+          );
+
+          await queryRunner.query(`DELETE FROM students WHERE id = $1`, [
+            studentId,
+          ]);
+
+          await queryRunner.commitTransaction();
+
+          return {
+            data: CreateStudentDto.toResponse(foundStudent) as IStudent,
+          };
+        } catch (error) {
+          await queryRunner.rollbackTransaction();
+          throw error;
+        }
       }
     } catch (err: unknown) {
       if (err instanceof InternalServerErrorException)
@@ -173,6 +209,8 @@ export class StudentService {
         );
 
       throw err;
+    } finally {
+      await queryRunner.release();
     }
   }
 

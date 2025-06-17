@@ -70,6 +70,7 @@ export class StudentEntity extends AbstractEntity implements IStudent {
   @OneToMany(
     () => RecommendationEntity,
     (recommendation) => recommendation.student,
+    { onDelete: 'CASCADE' },
   )
   recommendation?: IRecommendation[];
 }

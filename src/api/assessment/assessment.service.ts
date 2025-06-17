@@ -126,7 +126,7 @@ export class AssessmentService {
   async Update(
     req: UpdateAssessmentDto,
     assessmentId: string,
-  ): Promise<Record<any, IAssessment>> {
+  ): Promise<Record<string, IAssessment>> {
     const foundAssessment = await this.assessmentRepository.findOne({
       where: { id: assessmentId as Uuid },
       relations: ['assessmentSubCriteria'],
@@ -137,33 +137,88 @@ export class AssessmentService {
     }
 
     try {
-      const existingAssessmentSub = foundAssessment.assessmentSubCriteria.map(
-        (assSub) => assSub.id,
+      // Create a map of existing assessment sub criteria by ID for faster lookup
+      const existingAssessmentSubMap = new Map();
+      foundAssessment.assessmentSubCriteria.forEach((assSub) => {
+        existingAssessmentSubMap.set(assSub.id, assSub);
+      });
+
+      console.log('=== DEBUG INFO ===');
+      console.log(
+        'Existing assessment sub criteria IDs:',
+        Array.from(existingAssessmentSubMap.keys()),
+      );
+      console.log(
+        'Incoming scores:',
+        req.scores.map((s) => ({
+          assessmentSubCriteriaId: s.assessmentSubCriteriaId,
+          subCriteriaId: s.subCriteriaId,
+          score: s.score,
+        })),
       );
 
-      await Promise.all(
-        req.scores.map(async (score) => {
-          if (
-            score.assessmentSubCriteriaId &&
-            existingAssessmentSub.includes(score.assessmentSubCriteriaId)
-          ) {
-            await this.assessmentSubCriteriaRepository.update(
-              score.assessmentSubCriteriaId,
-              {
-                subCriteriaId: score.subCriteriaId,
-                score: score.score,
-              },
-            );
-          } else {
-            await this.assessmentSubCriteriaRepository.save(score);
-          }
-        }),
-      );
+      // Process each score update
+      for (const score of req.scores) {
+        const assessmentSubId = Number(score.assessmentSubCriteriaId);
+
+        // Check if the assessment sub criteria exists (only check by ID, not subCriteriaId)
+        if (existingAssessmentSubMap.has(assessmentSubId)) {
+          console.log(`Updating assessment sub criteria ${assessmentSubId}:`, {
+            newSubCriteriaId: score.subCriteriaId,
+            newScore: score.score,
+          });
+
+          const updateResult =
+            await this.assessmentSubCriteriaRepository.update(assessmentSubId, {
+              subCriteriaId: Number(score.subCriteriaId),
+              score: Number(score.score),
+            });
+
+          console.log(`Update result for ${assessmentSubId}:`, {
+            affected: updateResult.affected,
+            success: updateResult.affected > 0,
+          });
+
+          // Verify the update
+          const verifyRecord =
+            await this.assessmentSubCriteriaRepository.findOne({
+              where: { id: assessmentSubId },
+            });
+          console.log(`Verified record ${assessmentSubId}:`, {
+            currentSubCriteriaId: verifyRecord?.subCriteriaId,
+            currentScore: verifyRecord?.score,
+          });
+        } else {
+          console.warn(
+            `Assessment sub criteria ID ${assessmentSubId} not found in existing records`,
+          );
+        }
+      }
+
+      // Fetch the updated assessment
+      const updatedAssessment = await this.assessmentRepository.findOne({
+        where: { id: assessmentId as Uuid },
+        relations: [
+          'assessmentSubCriteria',
+          'assessmentSubCriteria.subCriteria',
+        ],
+      });
+
+      console.log('=== FINAL VERIFICATION ===');
+      updatedAssessment?.assessmentSubCriteria.forEach((sub) => {
+        console.log(
+          `Final state - ID ${sub.id}: subCriteriaId=${sub.subCriteriaId}, score=${sub.score}`,
+        );
+      });
+      console.log('=========================');
 
       return {
-        data: CreateAssessmentDto.toResponse(foundAssessment) as IAssessment,
+        data: CreateAssessmentDto.toResponse(
+          updatedAssessment ?? foundAssessment,
+        ) as IAssessment,
       };
     } catch (err: unknown) {
+      console.error('Update error:', err);
       throw new InternalServerErrorException(
         err instanceof Error ? err.message : 'Unexpected error',
       );

@@ -71,8 +71,12 @@ export class NormalizedMatrixRepository extends Repository<NormalizedMatricesEnt
     const query = this.createQueryBuilder(targetName)
       .select(`${targetName}.lecturerId`, 'lecturerId')
       .addSelect(`SUM(${targetName}.normalizedValue)`, 'finalScore')
+      .leftJoin(
+        'criteria',
+        'criteria',
+        `criteria.id = ${targetName}.criteriaId`,
+      )
       .groupBy(`${targetName}.lecturerId`);
-
     return await query.getRawMany();
   }
 }

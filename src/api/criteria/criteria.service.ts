@@ -6,7 +6,7 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { DataSource, In } from 'typeorm';
+import { DataSource, In, Not } from 'typeorm';
 import { SubCriteriaRepository } from '../sub-criteria/sub-criteria.repository';
 import { CriteriaRepository } from './criteria.repository';
 import { CreateCriteriaDto } from './dto/create.dto';
@@ -88,7 +88,6 @@ export class CriteriaService {
     }
 
     try {
-      // Update kriteria utama
       const updatedCriteria = await this.criteriaRepository.save({
         ...foundCriteria,
         name: req.name,
@@ -96,14 +95,16 @@ export class CriteriaService {
         type: req.type,
       });
 
-      const existingSubCriteriaIds = foundCriteria.subCriteria.map(
-        (sc) => sc.id,
-      );
+      const submittedIds = req.subCriteria.map((sub) => sub.id).filter(Boolean);
 
-      // Update atau tambah sub-kriteria secara paralel
+      await this.subCriteriaRepository.delete({
+        criteriaId: updatedCriteria.id,
+        id: Not(In(submittedIds)),
+      });
+
       await Promise.all(
         req.subCriteria.map(async (sub) => {
-          if (sub.id && existingSubCriteriaIds.includes(sub.id)) {
+          if (sub.id) {
             await this.subCriteriaRepository.update(sub.id, {
               name: sub.name,
               weight: sub.weight,
