@@ -1,4 +1,5 @@
 import { Uuid } from '@/common/types/common.type';
+import { roundToThreeDecimals } from '@/utils/util';
 import {
   Column,
   Entity,
@@ -38,7 +39,7 @@ export class NormalizedMatricesEntity
     precision: 5,
     scale: 2,
     transformer: {
-      to: (value: number) => value,
+      to: (value: number) => roundToThreeDecimals(value),
       from: (value: string) => parseFloat(value),
     },
   })

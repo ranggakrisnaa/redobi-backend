@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
 import { RecommendationStageEnum } from '@/common/enums/recommendation-stage.enum';
 import { Uuid } from '@/common/types/common.type';
@@ -9,7 +10,7 @@ import { INormalizedMatrices } from '@/database/interface-model/normalized-matri
 import { IRankingMatrices } from '@/database/interface-model/ranking-matrices-entity.interface';
 import { IRecommendation } from '@/database/interface-model/recommendation-entity.interface';
 import { SupabaseService } from '@/libs/supabase/supabase.service';
-import { getRelativeFilePath } from '@/utils/util';
+import { getRelativeFilePath, roundToThreeDecimals } from '@/utils/util';
 import {
   BadRequestException,
   Injectable,
@@ -148,126 +149,173 @@ export class RecommendationService {
         );
       }
 
-      const subCriteriaScoresMap = new Map<
+      const decisionMatrix = new Map<string, Map<number, number>>();
+      const lecturerInfo = new Map<string, { id: string; name: string }>();
+      const subCriteriaInfo = new Map<
         number,
         {
-          scores: number[];
-          type: CriteriaTypeEnum;
           name: string;
           weight: number;
           criteriaId: number;
           criteriaName: string;
+          criteriaType: CriteriaTypeEnum;
         }
       >();
 
-      const lecturerSubCriteriaData = [];
-
+      // Build decision matrix and collect sub-criteria info
       for (const assessment of allAssessments) {
+        const lecturerId = assessment.lecturerId;
+        const lecturerName = assessment.lecturer.fullName;
+
+        // Store lecturer info
+        lecturerInfo.set(lecturerId, {
+          id: lecturerId,
+          name: lecturerName,
+        });
+
+        if (!decisionMatrix.has(lecturerId)) {
+          decisionMatrix.set(lecturerId, new Map<number, number>());
+        }
+
         for (const sub of assessment.assessmentSubCriteria) {
           const subId = sub.subCriteriaId;
-          const criteriaType = sub.subCriteria.criteria.type;
-          const subCriteriaWeight = sub.subCriteria.weight || 0;
 
-          lecturerSubCriteriaData.push({
-            lecturerId: assessment.lecturerId,
-            lecturerName: assessment.lecturer.fullName,
-            subCriteriaId: subId,
-            subCriteriaName: sub.subCriteria.name,
-            score: sub.score,
-            weight: subCriteriaWeight,
-            criteriaId: sub.subCriteria.criteria.id,
-            criteriaName: sub.subCriteria.criteria.name,
-            criteriaType: criteriaType,
-          });
-
-          if (!subCriteriaScoresMap.has(subId)) {
-            subCriteriaScoresMap.set(subId, {
-              scores: [],
-              type: criteriaType,
+          if (!subCriteriaInfo.has(subId)) {
+            subCriteriaInfo.set(subId, {
               name: sub.subCriteria.name,
-              weight: subCriteriaWeight,
+              weight: sub.subCriteria.weight || 0,
               criteriaId: sub.subCriteria.criteria.id,
               criteriaName: sub.subCriteria.criteria.name,
+              criteriaType: sub.subCriteria.criteria.type,
             });
           }
 
-          subCriteriaScoresMap.get(subId).scores.push(sub.score);
+          decisionMatrix.get(lecturerId).set(subId, sub.score);
         }
       }
-      console.log(lecturerSubCriteriaData);
 
-      const subCriteriaRefMap = new Map<number, number>();
-
-      for (const [subId, data] of subCriteriaScoresMap.entries()) {
-        const { scores, type, name } = data;
-        const refValue =
-          type === CriteriaTypeEnum.BENEFIT
-            ? Math.max(...scores)
-            : Math.min(...scores);
-
-        subCriteriaRefMap.set(subId, refValue);
+      console.log('Decision Matrix:');
+      for (const [lecturerId, scores] of decisionMatrix.entries()) {
+        const lecturer = lecturerInfo.get(lecturerId);
         console.log(
-          `${name} (${type}): [${scores.join(', ')}] => Ref: ${refValue}`,
+          `${lecturer.name} (${lecturerId}):`,
+          Object.fromEntries(scores),
         );
       }
 
-      const normalizedSubCriteriaData = [];
+      const subCriteriaRefValues = new Map<number, number>();
 
-      for (const data of lecturerSubCriteriaData) {
-        const refValue = subCriteriaRefMap.get(data.subCriteriaId);
-        let normalizedScore = 0;
+      for (const [subId, info] of subCriteriaInfo.entries()) {
+        const allScoresForSubCriteria = [];
 
-        if (data.criteriaType === CriteriaTypeEnum.BENEFIT) {
-          normalizedScore = refValue > 0 ? data.score / refValue : 0;
-        } else {
-          normalizedScore = data.score > 0 ? refValue / data.score : 0;
+        for (const [lecturerId, scores] of decisionMatrix.entries()) {
+          const score = scores.get(subId) || 0;
+          allScoresForSubCriteria.push(score);
         }
 
-        normalizedSubCriteriaData.push({
-          ...data,
-          normalizedScore,
-        });
+        let refValue = 0;
+        if (info.criteriaType === CriteriaTypeEnum.BENEFIT) {
+          refValue = Math.max(...allScoresForSubCriteria);
+        } else {
+          const nonZeroScores = allScoresForSubCriteria.filter((s) => s > 0);
+          refValue = nonZeroScores.length > 0 ? Math.min(...nonZeroScores) : 1;
+        }
+
+        subCriteriaRefValues.set(subId, refValue);
       }
 
-      const criteriaWeightedScores = new Map<
-        string,
-        {
-          lecturerId: string;
-          lecturerName: string;
-          criteriaId: number;
-          criteriaName: string;
-          totalWeightedScore: number;
+      console.log('Reference Values per Sub-Criteria:');
+      for (const [subId, refValue] of subCriteriaRefValues.entries()) {
+        const info = subCriteriaInfo.get(subId);
+        console.log(`${info.name} (${info.criteriaType}): ${refValue}`);
+      }
+
+      const normalizedMatrix = new Map<string, Map<number, number>>();
+
+      for (const [lecturerId, scores] of decisionMatrix.entries()) {
+        normalizedMatrix.set(lecturerId, new Map<number, number>());
+
+        for (const [subId, score] of scores.entries()) {
+          const info = subCriteriaInfo.get(subId);
+          const refValue = subCriteriaRefValues.get(subId);
+          let normalizedScore = 0;
+
+          if (info.criteriaType === CriteriaTypeEnum.BENEFIT) {
+            normalizedScore = refValue > 0 ? score / refValue : 0;
+          } else {
+            normalizedScore = score > 0 ? refValue / score : 0;
+          }
+
+          normalizedScore = roundToThreeDecimals(normalizedScore);
+          normalizedMatrix.get(lecturerId).set(subId, normalizedScore);
         }
-      >();
+      }
 
-      for (const data of normalizedSubCriteriaData) {
-        const weightedNormalizedScore = data.normalizedScore * data.weight;
-        console.log(weightedNormalizedScore, 'WEIGHT SCOREE =============');
+      const weightedMatrix = new Map<string, Map<number, number>>();
 
-        const key = `${data.lecturerId}-${data.criteriaId}`;
+      for (const [lecturerId, normalizedScores] of normalizedMatrix.entries()) {
+        weightedMatrix.set(lecturerId, new Map<number, number>());
 
-        if (!criteriaWeightedScores.has(key)) {
-          criteriaWeightedScores.set(key, {
-            lecturerId: data.lecturerId,
-            lecturerName: data.lecturerName,
-            criteriaId: data.criteriaId,
-            criteriaName: data.criteriaName,
-            totalWeightedScore: 0,
+        for (const [subId, normalizedScore] of normalizedScores.entries()) {
+          const info = subCriteriaInfo.get(subId);
+          const weightedScore = roundToThreeDecimals(
+            normalizedScore * info.weight,
+          );
+          weightedMatrix.get(lecturerId).set(subId, weightedScore);
+        }
+      }
+
+      console.log('\n=== DETAILED NORMALIZATION REPORT (Excel Format) ===');
+      const detailedReport = [];
+
+      for (const [lecturerId, scores] of decisionMatrix.entries()) {
+        const lecturer = lecturerInfo.get(lecturerId);
+
+        for (const [subId, originalScore] of scores.entries()) {
+          const info = subCriteriaInfo.get(subId);
+          const normalizedScore = normalizedMatrix.get(lecturerId).get(subId);
+          const weightedScore = weightedMatrix.get(lecturerId).get(subId);
+
+          detailedReport.push({
+            lecturerName: lecturer.name,
+            criteriaName: info.criteriaName,
+            subCriteriaName: info.name,
+            originalScore,
+            normalizedScore,
+            weight: info.weight,
+            weightedScore,
           });
         }
-
-        const existing = criteriaWeightedScores.get(key);
-        existing.totalWeightedScore += weightedNormalizedScore;
       }
-      console.log(Array.from(criteriaWeightedScores.values()));
 
-      const bulkInsertData = Array.from(criteriaWeightedScores.values()).map(
-        (entry) => ({
-          lecturerId: entry.lecturerId,
-          criteriaId: entry.criteriaId,
-          normalizedValue: entry.totalWeightedScore,
-        }),
-      );
+      console.table(detailedReport);
+
+      const criteriaAggregated = new Map<string, Map<number, number>>();
+
+      for (const [lecturerId, weightedScores] of weightedMatrix.entries()) {
+        criteriaAggregated.set(lecturerId, new Map<number, number>());
+
+        for (const [subId, weightedScore] of weightedScores.entries()) {
+          const info = subCriteriaInfo.get(subId);
+          const criteriaId = info.criteriaId;
+
+          const currentTotal =
+            criteriaAggregated.get(lecturerId).get(criteriaId) || 0;
+          const newTotal = roundToThreeDecimals(currentTotal + weightedScore);
+          criteriaAggregated.get(lecturerId).set(criteriaId, newTotal);
+        }
+      }
+
+      const bulkInsertData = [];
+      for (const [lecturerId, criteriaScores] of criteriaAggregated.entries()) {
+        for (const [criteriaId, aggregatedScore] of criteriaScores.entries()) {
+          bulkInsertData.push({
+            lecturerId: lecturerId,
+            criteriaId: criteriaId,
+            normalizedValue: aggregatedScore,
+          });
+        }
+      }
 
       if (bulkInsertData.length > 0) {
         await queryRunner.manager.insert(
@@ -276,11 +324,36 @@ export class RecommendationService {
         );
       }
 
+      // Step 8: Calculate final total scores
+      const finalTotalScores: Record<string, number> = {};
+
+      for (const [lecturerId, criteriaScores] of criteriaAggregated.entries()) {
+        const lecturer = lecturerInfo.get(lecturerId);
+        let totalScore = 0;
+
+        for (const [criteriaId, score] of criteriaScores.entries()) {
+          totalScore += score;
+        }
+
+        finalTotalScores[lecturer.name] = roundToThreeDecimals(totalScore);
+      }
+
+      console.log('\n=== FINAL RANKING SCORES ===');
+      console.table(
+        Object.entries(finalTotalScores)
+          .sort(([, a], [, b]) => b - a) // Sort by score descending
+          .map(([lecturerName, totalScore], index) => ({
+            rank: index + 1,
+            lecturerName,
+            totalScore,
+          })),
+      );
+
       await queryRunner.commitTransaction();
 
       return {
         message:
-          'Matrix normalization with correct SAW calculation (summed per criteria) created successfully.',
+          'SAW Matrix normalization completed successfully with correct Excel-like calculation.',
       };
     } catch (err) {
       await queryRunner.rollbackTransaction();
