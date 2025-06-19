@@ -82,11 +82,11 @@
     "subCriteria": [
       {
         "name": "Sistem Komputer",
-        "weight": 0.4
+        "weight": 0.04
       },
       {
         "name": "Teknik Informatika",
-        "weight": 0.6
+        "weight": 0.06
       }
     ]
   }
