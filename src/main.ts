@@ -44,7 +44,7 @@ async function bootstrap() {
     process.env.PORT || configService.getOrThrow('app.port', { infer: true });
 
   app.enableCors({
-    origin: corsOrigin,
+    origin: 'https://redobi-frontend.vercel.app',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     allowedHeaders: 'Content-Type, Accept, Authorization',
     credentials: true,
