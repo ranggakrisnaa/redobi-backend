@@ -44,10 +44,39 @@ async function bootstrap() {
     process.env.PORT || configService.getOrThrow('app.port', { infer: true });
 
   app.enableCors({
-    origin: 'https://redobi-frontend.vercel.app',
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    allowedHeaders: 'Content-Type, Accept, Authorization',
+    origin: (origin, callback) => {
+      console.log('Incoming Origin:', origin);
+
+      const allowedOrigins = [
+        'http://localhost:5173',
+        'https://redobi-frontend.vercel.app',
+      ];
+
+      if (!origin) {
+        console.log('No origin - allowing request');
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        console.log('Origin allowed:', origin);
+        callback(null, true);
+      } else {
+        console.log('Origin blocked:', origin);
+        callback(new Error(`Origin ${origin} not allowed by CORS`));
+      }
+    },
     credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Accept',
+      'Authorization',
+      'X-Requested-With',
+      'ngrok-skip-browser-warning',
+    ],
+    exposedHeaders: ['set-cookie'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   });
   console.info('CORS Origin:', corsOrigin);
 
