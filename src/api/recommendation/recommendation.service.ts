@@ -12,7 +12,6 @@ import { IRecommendation } from '@/database/interface-model/recommendation-entit
 import { SupabaseService } from '@/libs/supabase/supabase.service';
 import { getRelativeFilePath, roundToThreeDecimals } from '@/utils/util';
 import {
-  BadRequestException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -666,52 +665,104 @@ export class RecommendationService {
   ): Promise<Record<string, IRecommendation | IRecommendation[]>> {
     try {
       if (!recommendationId) {
-        const { recommendationIds, lecturerIds, studentIds } = req;
+        const { recommendationIds = [], studentIds, lecturers } = req;
 
-        if (
-          !Array.isArray(recommendationIds) ||
-          !Array.isArray(lecturerIds) ||
-          !Array.isArray(studentIds) ||
-          recommendationIds.length !== lecturerIds.length ||
-          recommendationIds.length !== studentIds.length
-        ) {
-          throw new BadRequestException(
-            'Recommendation IDs, Lecturer IDs, and Student IDs are required and must have the same length.',
-          );
-        }
+        // const invalidLecturers = lecturers.filter(
+        //   (l) => !l.lecturerId || !l.positions,
+        // );
+        // if (invalidLecturers.length > 0) {
+        //   throw new BadRequestException(
+        //     'Each lecturer must have lecturerId and positions fields',
+        //   );
+        // }
+
+        const validRecommendationIds = recommendationIds.filter(Boolean);
 
         const foundRecommendations = await this.recommendationRepository.find({
-          where: {
-            id: In(recommendationIds),
-          },
+          where: { id: In(validRecommendationIds) },
         });
 
-        if (!foundRecommendations.length) {
-          throw new NotFoundException('Recommendations not found');
-        }
+        const lecturerMap = new Map<string, string>();
+        const studentMap = new Map<string, string>();
+        const positionMap = new Map<string, string>();
 
-        const mappedRecommendations = await Promise.all(
-          foundRecommendations.map(async (recommendation) => {
-            const index = recommendationIds.indexOf(recommendation.id);
-            if (index === -1) return recommendation;
-            const foundRankingMatrix =
-              await this.rankingMatricesRepository.findOne({
-                where: { lecturerId: lecturerIds[index] as Uuid },
-              });
+        lecturers.forEach((lect, index) => {
+          const recId = recommendationIds[index] ?? null;
 
+          if (recId) {
+            lecturerMap.set(recId, lect.lecturerId);
+            studentMap.set(recId, studentIds[index]);
+            positionMap.set(recId, lect.positions);
+          }
+        });
+
+        const uniqueLecturerIds = [
+          ...new Set(lecturers.map((l) => l.lecturerId)),
+        ];
+
+        const rankingMatrices = await this.rankingMatricesRepository.find({
+          where: { lecturerId: In(uniqueLecturerIds) },
+        });
+
+        const rankingMap = new Map<string, number>();
+        rankingMatrices.forEach((matrix) => {
+          rankingMap.set(matrix.lecturerId, matrix.finalScore ?? 0);
+        });
+
+        const mappedRecommendations = lecturers.map((lect, index) => {
+          const recId = recommendationIds[index] ?? null;
+          const studentId = studentIds[index];
+          const score = rankingMap.get(lect.lecturerId) ?? 0;
+
+          const existing = recId
+            ? foundRecommendations.find((r) => r.id === recId)
+            : null;
+
+          if (existing) {
             return {
-              ...recommendation,
-              lecturerId: lecturerIds[index],
-              studentId: studentIds[index],
-              recommendationScore: foundRankingMatrix?.finalScore
-                ? foundRankingMatrix?.finalScore
-                : 0,
+              ...existing,
+              lecturerId: lect.lecturerId,
+              studentId,
+              position: positionMap[index],
+              recommendationScore: score,
+              updatedAt: new Date(),
             };
-          }),
-        );
+          }
 
-        const updated = await this.recommendationRepository.save(
-          mappedRecommendations,
+          return {
+            lecturerId: lect.lecturerId,
+            studentId,
+            position: lect.positions,
+            recommendationScore: score,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+        });
+
+        const updated = await this.recommendationRepository.manager.transaction(
+          async (tx) => {
+            const savedRecommendations = await tx.save(
+              this.recommendationRepository.target,
+              mappedRecommendations,
+            );
+
+            await Promise.all(
+              uniqueLecturerIds.map(async (lecturerId) => {
+                const totalCount = await tx.count(
+                  this.recommendationRepository.target,
+                  {
+                    where: { lecturerId: lecturerId as Uuid },
+                  },
+                );
+
+                return tx.update(this.lecturerRepository.target, lecturerId, {
+                  jumlahBimbingan: totalCount,
+                });
+              }),
+            );
+
+            return savedRecommendations;
+          },
         );
 
         return {
@@ -724,34 +775,15 @@ export class RecommendationService {
             }),
           ) as IRecommendation[],
         };
-      } else {
-        const foundReccomendation = await this.recommendationRepository.findOne(
-          { where: { id: recommendationId as Uuid } },
-        );
-        if (!foundReccomendation) {
-          throw new NotFoundException('Reccomendation not found');
-        }
-
-        foundReccomendation.lecturerId = req.lecturerIds[0] as Uuid;
-        foundReccomendation.studentId = req.studentIds[0] as Uuid;
-
-        const updated =
-          await this.recommendationRepository.save(foundReccomendation);
-
-        return {
-          data: UpdateRecommendationDto.toResponse({
-            id: updated.id,
-            createdAt: updated.createdAt,
-            updatedAt: updated.updatedAt,
-            deletedAt: updated.deletedAt,
-          }) as unknown as IRecommendation,
-        };
       }
     } catch (err: unknown) {
-      if (err instanceof InternalServerErrorException)
+      console.error('Error updating recommendations:', err);
+
+      if (err instanceof InternalServerErrorException) {
         throw new InternalServerErrorException(
           err instanceof Error ? err.message : 'Unexpected error',
         );
+      }
 
       throw err;
     }
