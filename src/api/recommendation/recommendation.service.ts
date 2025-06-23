@@ -443,7 +443,6 @@ export class RecommendationService {
         { studentId: string; major: string; value: number }
       >();
 
-      // Calculate thesis keyword matching scores for students
       for (const student of foundAllStudents) {
         const foundThesisKeyword = await this.thesisKeywordRepository.findOne({
           where: {
@@ -453,14 +452,12 @@ export class RecommendationService {
         });
 
         const keywordArray = student.judulSkripsi.toLowerCase().split(' ');
-        const filteredStudentThesisKeyword = keywordArray.filter(
-          (key) =>
-            foundThesisKeyword &&
-            foundThesisKeyword.keyword.some(
-              (name) => name.name.toLowerCase() === key.toLowerCase(),
-            ),
+        const matchedKeywords = keywordArray.filter((word) =>
+          foundThesisKeyword?.keyword.some(
+            (k) => k.name.toLowerCase() === word,
+          ),
         );
-        const value = filteredStudentThesisKeyword.length * 10;
+        const value = matchedKeywords.length * 10;
 
         studentMapWithThesisValue.set(student.id, {
           studentId: student.id,
@@ -486,6 +483,9 @@ export class RecommendationService {
 
       await this.recommendationRepository.delete({});
 
+      // Global lecturer tracking across all majors
+      const globalLecturerAssignments = new Map<string, number>();
+
       for (const major of majors) {
         const filteredRanking = ranking.filter(
           (value) => value.major === major,
@@ -493,18 +493,13 @@ export class RecommendationService {
 
         if (filteredRanking.length === 0) continue;
 
-        const allLecturers = foundAllRankings.map(
-          (ranking) => ranking.lecturer,
-        );
+        const allLecturers = foundAllRankings.map((r) => r.lecturer);
 
         const pembimbing1Lecturers = allLecturers.filter(
-          (lecturer) =>
-            lecturer.tipePembimbing === TipePembimbingEnum.PEMBIMBING_SATU,
+          (l) => l.tipePembimbing === TipePembimbingEnum.PEMBIMBING_SATU,
         );
-
         const pembimbing2Lecturers = allLecturers.filter(
-          (lecturer) =>
-            lecturer.tipePembimbing === TipePembimbingEnum.PEMBIMBING_DUA,
+          (l) => l.tipePembimbing === TipePembimbingEnum.PEMBIMBING_DUA,
         );
 
         const lecturerRankingMap = new Map();
@@ -512,6 +507,7 @@ export class RecommendationService {
           lecturerRankingMap.set(ranking.lecturer.id, ranking.finalScore || 0);
         });
 
+        // Sort lecturers by ranking score (highest first)
         pembimbing1Lecturers.sort(
           (a, b) =>
             (lecturerRankingMap.get(b.id) || 0) -
@@ -523,133 +519,189 @@ export class RecommendationService {
             (lecturerRankingMap.get(a.id) || 0),
         );
 
-        const lecturerAssignments = new Map<string, number>();
-
+        // Initialize lecturer assignments if not exists
         [...pembimbing1Lecturers, ...pembimbing2Lecturers].forEach(
           (lecturer) => {
-            lecturerAssignments.set(lecturer.id, 0);
+            if (!globalLecturerAssignments.has(lecturer.id)) {
+              globalLecturerAssignments.set(lecturer.id, 0);
+            }
           },
         );
 
-        const maxStudentsPerPembimbing1 =
-          pembimbing1Lecturers.length > 0
-            ? Math.ceil(filteredRanking.length / pembimbing1Lecturers.length)
-            : 0;
-        const maxStudentsPerPembimbing2 =
-          pembimbing2Lecturers.length > 0
-            ? Math.ceil(filteredRanking.length / pembimbing2Lecturers.length)
-            : 0;
+        // Helper function to check if lecturer has available quota
+        const hasAvailableQuota = (lecturer: any) => {
+          const currentAssignments =
+            globalLecturerAssignments.get(lecturer.id) || 0;
+          const totalLoad = lecturer.jumlahBimbingan + currentAssignments;
+          return totalLoad < lecturer.kuotaBimbingan;
+        };
+
+        // Helper function to get available lecturers with quota
+        const getAvailableLecturers = (lecturers: any[]) => {
+          return lecturers.filter((lecturer) => hasAvailableQuota(lecturer));
+        };
+
+        // Helper function to get least loaded lecturer from available ones
+        const getLeastLoadedFromAvailable = (lecturers: any[]) => {
+          const available = getAvailableLecturers(lecturers);
+          if (available.length === 0) return null;
+
+          return available.reduce((prev, curr) => {
+            const prevLoad =
+              prev.jumlahBimbingan +
+              (globalLecturerAssignments.get(prev.id) || 0);
+            const currLoad =
+              curr.jumlahBimbingan +
+              (globalLecturerAssignments.get(curr.id) || 0);
+
+            if (prevLoad !== currLoad) {
+              return prevLoad < currLoad ? prev : curr;
+            }
+
+            // If load is equal, choose the one with higher ranking score
+            const prevScore = lecturerRankingMap.get(prev.id) || 0;
+            const currScore = lecturerRankingMap.get(curr.id) || 0;
+            return prevScore >= currScore ? prev : curr;
+          });
+        };
+
+        // Assign pembimbing 1 with strict quota enforcement
+        let assignedPembimbing1 = 0;
+        let skippedPembimbing1 = 0;
 
         for (const student of filteredRanking) {
-          let assigned = false;
-
-          for (const lecturer of pembimbing1Lecturers) {
-            const currentCount = lecturerAssignments.get(lecturer.id) || 0;
-
-            if (currentCount < maxStudentsPerPembimbing1) {
-              await this.recommendationRepository.save({
-                studentId: student.studentId,
-                lecturerId: lecturer.id,
-                recommendationScore: lecturerRankingMap.get(lecturer.id) || 0,
-                position: TipePembimbingEnum.PEMBIMBING_SATU,
-              });
-
-              lecturerAssignments.set(lecturer.id, currentCount + 1);
-              assigned = true;
-              break;
-            }
+          if (pembimbing1Lecturers.length === 0) {
+            skippedPembimbing1++;
+            continue;
           }
 
-          if (!assigned && pembimbing1Lecturers.length > 0) {
-            const leastLoadedLecturer = pembimbing1Lecturers.reduce(
-              (prev, curr) => {
-                const prevCount = lecturerAssignments.get(prev.id) || 0;
-                const currCount = lecturerAssignments.get(curr.id) || 0;
-                return prevCount <= currCount ? prev : curr;
-              },
-            );
+          const selectedLecturer =
+            getLeastLoadedFromAvailable(pembimbing1Lecturers);
 
+          if (selectedLecturer) {
             await this.recommendationRepository.save({
               studentId: student.studentId,
-              lecturerId: leastLoadedLecturer.id,
+              lecturerId: selectedLecturer.id,
               recommendationScore:
-                lecturerRankingMap.get(leastLoadedLecturer.id) || 0,
+                lecturerRankingMap.get(selectedLecturer.id) || 0,
               position: TipePembimbingEnum.PEMBIMBING_SATU,
             });
 
-            const currentCount =
-              lecturerAssignments.get(leastLoadedLecturer.id) || 0;
-            lecturerAssignments.set(leastLoadedLecturer.id, currentCount + 1);
+            globalLecturerAssignments.set(
+              selectedLecturer.id,
+              (globalLecturerAssignments.get(selectedLecturer.id) || 0) + 1,
+            );
+            assignedPembimbing1++;
+          } else {
+            skippedPembimbing1++;
+            console.log(
+              `Major ${major}: Student ${student.studentId} cannot be assigned pembimbing 1 - all lecturers at full capacity`,
+            );
           }
         }
 
-        pembimbing2Lecturers.forEach((lecturer) => {
-          lecturerAssignments.set(lecturer.id, 0);
-        });
+        // Assign pembimbing 2 with strict quota enforcement
+        let assignedPembimbing2 = 0;
+        let skippedPembimbing2 = 0;
 
         for (const student of filteredRanking) {
-          let assigned = false;
-
-          for (const lecturer of pembimbing2Lecturers) {
-            const currentCount = lecturerAssignments.get(lecturer.id) || 0;
-
-            if (currentCount < maxStudentsPerPembimbing2) {
-              await this.recommendationRepository.save({
-                studentId: student.studentId,
-                lecturerId: lecturer.id,
-                recommendationScore: lecturerRankingMap.get(lecturer.id) || 0,
-                position: TipePembimbingEnum.PEMBIMBING_DUA,
-              });
-
-              lecturerAssignments.set(lecturer.id, currentCount + 1);
-              assigned = true;
-              break;
-            }
+          if (pembimbing2Lecturers.length === 0) {
+            skippedPembimbing2++;
+            continue;
           }
 
-          if (!assigned && pembimbing2Lecturers.length > 0) {
-            const leastLoadedLecturer = pembimbing2Lecturers.reduce(
-              (prev, curr) => {
-                const prevCount = lecturerAssignments.get(prev.id) || 0;
-                const currCount = lecturerAssignments.get(curr.id) || 0;
-                return prevCount <= currCount ? prev : curr;
-              },
-            );
+          const selectedLecturer =
+            getLeastLoadedFromAvailable(pembimbing2Lecturers);
 
+          if (selectedLecturer) {
             await this.recommendationRepository.save({
               studentId: student.studentId,
-              lecturerId: leastLoadedLecturer.id,
+              lecturerId: selectedLecturer.id,
               recommendationScore:
-                lecturerRankingMap.get(leastLoadedLecturer.id) || 0,
+                lecturerRankingMap.get(selectedLecturer.id) || 0,
               position: TipePembimbingEnum.PEMBIMBING_DUA,
             });
 
-            const currentCount =
-              lecturerAssignments.get(leastLoadedLecturer.id) || 0;
-            lecturerAssignments.set(leastLoadedLecturer.id, currentCount + 1);
+            globalLecturerAssignments.set(
+              selectedLecturer.id,
+              (globalLecturerAssignments.get(selectedLecturer.id) || 0) + 1,
+            );
+            assignedPembimbing2++;
+          } else {
+            skippedPembimbing2++;
+            console.log(
+              `Major ${major}: Student ${student.studentId} cannot be assigned pembimbing 2 - all lecturers at full capacity`,
+            );
           }
         }
+
+        console.log(`Major ${major} Summary:`);
+        console.log(`- Students: ${filteredRanking.length}`);
+        console.log(
+          `- Pembimbing 1 assigned: ${assignedPembimbing1}, skipped: ${skippedPembimbing1}`,
+        );
+        console.log(
+          `- Pembimbing 2 assigned: ${assignedPembimbing2}, skipped: ${skippedPembimbing2}`,
+        );
       }
 
-      const lecturerIds = foundAllRankings.map(
-        (ranking) => ranking.lecturer.id,
-      );
-
+      // Update actual student count for all lecturers and verify quota compliance
+      const lecturerIds = foundAllRankings.map((r) => r.lecturer.id);
       for (const lecturerId of lecturerIds) {
         const actualStudentCount = await this.recommendationRepository.count({
           where: { lecturerId },
         });
 
-        await this.lecturerRepository.update(lecturerId, {
-          jumlahBimbingan: actualStudentCount,
-        });
+        // Find lecturer info for quota verification
+        const lecturer = foundAllRankings.find(
+          (r) => r.lecturer.id === lecturerId,
+        )?.lecturer;
+        if (lecturer && actualStudentCount > lecturer.kuotaBimbingan) {
+          console.error(
+            `QUOTA VIOLATION: Lecturer ${lecturer.id} has ${actualStudentCount} assignments but quota is ${lecturer.kuotaBimbingan}`,
+          );
+
+          // Emergency cleanup - remove excess assignments
+          const recommendations = await this.recommendationRepository.find({
+            where: { lecturerId },
+            order: { id: 'DESC' }, // Remove latest assignments first
+          });
+
+          const excessCount = actualStudentCount - lecturer.kuotaBimbingan;
+          for (let i = 0; i < excessCount; i++) {
+            if (recommendations[i]) {
+              await this.recommendationRepository.remove(recommendations[i]);
+              console.log(
+                `Removed excess assignment for lecturer ${lecturerId}`,
+              );
+            }
+          }
+
+          // Recalculate actual count after cleanup
+          const finalCount = await this.recommendationRepository.count({
+            where: { lecturerId },
+          });
+
+          await this.lecturerRepository.update(lecturerId, {
+            jumlahBimbingan: finalCount,
+          });
+        } else {
+          await this.lecturerRepository.update(lecturerId, {
+            jumlahBimbingan: actualStudentCount,
+          });
+        }
+
+        console.log(
+          `Lecturer ${lecturerId}: ${actualStudentCount} assignments (quota: ${lecturer?.kuotaBimbingan || 'unknown'})`,
+        );
       }
 
       return {
-        message: 'Recommendation created successfully for all majors.',
+        message:
+          'Recommendation created successfully for all majors with strict quota enforcement.',
       };
     } catch (err: unknown) {
-      console.log(err);
+      console.error(err);
       if (err instanceof InternalServerErrorException)
         throw new InternalServerErrorException(
           err instanceof Error ? err.message : 'Unexpected error',
@@ -984,6 +1036,7 @@ export class RecommendationService {
           where: {
             studentId: In(req.recommendationIds),
           },
+          relations: ['lecturer'],
         });
 
         if (foundRecommendations.length < 1) {
@@ -991,6 +1044,21 @@ export class RecommendationService {
         }
 
         const recommendationIds = foundRecommendations.map((r) => r.id);
+
+        const lecturerIds = Array.from(
+          new Set(
+            foundRecommendations
+              .filter((r) => r.lecturer?.id)
+              .map((r) => r.lecturer!.id),
+          ),
+        );
+
+        if (lecturerIds.length > 0) {
+          await this.lecturerRepository.update(
+            { id: In(lecturerIds) },
+            { jumlahBimbingan: 0 },
+          );
+        }
 
         await this.recommendationRepository.delete(recommendationIds);
 
@@ -1004,11 +1072,28 @@ export class RecommendationService {
             }),
           ) as IRecommendation[],
         };
-      } else if (req?.deleteAll == true) {
-        const allRecommendations = await this.recommendationRepository.find();
+      } else if (req?.deleteAll === true) {
+        const allRecommendations = await this.recommendationRepository.find({
+          relations: ['lecturer'],
+        });
 
         if (allRecommendations.length < 1) {
           throw new NotFoundException('No recommendations found');
+        }
+
+        const lecturerIds = Array.from(
+          new Set(
+            allRecommendations
+              .filter((r) => r.lecturer?.id)
+              .map((r) => r.lecturer!.id),
+          ),
+        );
+
+        if (lecturerIds.length > 0) {
+          await this.lecturerRepository.update(
+            { id: In(lecturerIds) },
+            { jumlahBimbingan: 0 },
+          );
         }
 
         await this.recommendationRepository.clear();
@@ -1029,11 +1114,19 @@ export class RecommendationService {
             where: {
               id: recommendationId as Uuid,
             },
+            relations: ['lecturer'],
           },
         );
 
         if (!foundRecommendation) {
           throw new NotFoundException('Recommendation not found');
+        }
+
+        if (foundRecommendation.lecturer?.id) {
+          await this.lecturerRepository.update(
+            { id: foundRecommendation.lecturer.id },
+            { jumlahBimbingan: 0 },
+          );
         }
 
         await this.recommendationRepository.delete(recommendationId);
