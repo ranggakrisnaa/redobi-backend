@@ -1,12 +1,20 @@
 [
   {
-    "data": [
-      {
-        "fullName": "admin",
-        "email": "infinity.duos@gmail.com",
-        "username": "admin",
-        "password": "rangga"
-      }
-    ]
+    "fullName": "admin",
+    "email": "infinity.duos@gmail.com",
+    "username": "admin",
+    "password": "rangga"
+  },
+  {
+    "fullName": "admin1",
+    "email": "admin1redobi@gmail.com",
+    "username": "admin1",
+    "password": "admin"
+  },
+  {
+    "fullName": "admin2",
+    "email": "admin2redobi@gmail.com",
+    "username": "admin2",
+    "password": "admin"
   }
 ]
