@@ -25,6 +25,7 @@ export class CriteriaRepository extends Repository<CriteriaEntity> {
       .select(`${targetName}.id`)
       .limit(reqQuery.limit)
       .offset(reqQuery.offset);
+    this.applyFilters(idQuery, reqQuery, targetName);
 
     const ids = await idQuery.getRawMany();
     const criteriaIds = ids.map((row) => row[`${targetName}_id`]);
@@ -32,8 +33,6 @@ export class CriteriaRepository extends Repository<CriteriaEntity> {
     const criteriaQuery = this.createQueryBuilder(targetName)
       .leftJoinAndSelect(`${targetName}.subCriteria`, 'subCriteria')
       .whereInIds(criteriaIds);
-
-    this.applyFilters(criteriaQuery, reqQuery, targetName);
 
     const sortField = [
       { name: 'name', alias: `${targetName}.name` },
