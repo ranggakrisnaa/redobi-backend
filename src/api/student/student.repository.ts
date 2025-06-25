@@ -93,7 +93,7 @@ export class StudentRepository extends Repository<StudentEntity> {
   }
 
   async bulkDelete(studentIds: string[]): Promise<void> {
-    this.repo.delete({
+    await this.repo.delete({
       id: In(studentIds),
     });
   }
