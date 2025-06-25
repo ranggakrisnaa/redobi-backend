@@ -22,16 +22,17 @@ export class ThesisKeywordRepository extends Repository<ThesisKeywordsEntity> {
     const targetName = this.repo.metadata.targetName;
     const idQuery = this.createQueryBuilder(targetName)
       .select(`${targetName}.id`)
-      .limit(reqQuery.limit)
-      .offset(reqQuery.offset);
+      .leftJoin(`${targetName}.keyword`, 'keyword');
+
+    this.applyFilters(idQuery, reqQuery, targetName);
+
+    idQuery.limit(reqQuery.limit).offset(reqQuery.offset);
 
     const ids = await idQuery.getMany();
     const thesisIds = ids.map((row) => row[`${targetName}_id`]);
     const thesisQuery = this.createQueryBuilder(targetName)
       .leftJoinAndSelect(`${targetName}.keyword`, 'keyword')
       .whereInIds(thesisIds);
-
-    this.applyFilters(thesisQuery, reqQuery, targetName);
 
     const sortField = [
       { name: 'category', alias: `${targetName}.category` },
@@ -47,8 +48,6 @@ export class ThesisKeywordRepository extends Repository<ThesisKeywordsEntity> {
         toOrderEnum(reqQuery.order),
       );
     }
-
-    thesisQuery.limit(reqQuery.limit).offset(reqQuery.offset);
 
     const [data, total] = await thesisQuery.getManyAndCount();
 
