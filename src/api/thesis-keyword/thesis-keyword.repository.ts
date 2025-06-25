@@ -25,15 +25,16 @@ export class ThesisKeywordRepository extends Repository<ThesisKeywordsEntity> {
       .leftJoin(`${targetName}.keyword`, 'keyword');
 
     this.applyFilters(idQuery, reqQuery, targetName);
+    console.log(idQuery);
 
     idQuery.limit(reqQuery.limit).offset(reqQuery.offset);
 
     const ids = await idQuery.getMany();
-    const thesisIds = ids.map((row) => row[`${targetName}_id`]);
+    const thesisIds = ids.map((row) => row.id);
     const thesisQuery = this.createQueryBuilder(targetName)
       .leftJoinAndSelect(`${targetName}.keyword`, 'keyword')
       .whereInIds(thesisIds);
-
+    console.log(thesisIds, '<<<<<<<<<');
     const sortField = [
       { name: 'category', alias: `${targetName}.category` },
       { name: 'name', alias: `keyword.name` },
