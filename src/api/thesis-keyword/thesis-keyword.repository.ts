@@ -20,12 +20,18 @@ export class ThesisKeywordRepository extends Repository<ThesisKeywordsEntity> {
     reqQuery: ThesisKeywordReqQuery,
   ): Promise<OffsetPaginatedDto<IThesisKeyword>> {
     const targetName = this.repo.metadata.targetName;
-    const query = this.createQueryBuilder(targetName).leftJoinAndSelect(
-      `${targetName}.keyword`,
-      'keyword',
-    );
+    const idQuery = this.createQueryBuilder(targetName)
+      .select(`${targetName}.id`)
+      .limit(reqQuery.limit)
+      .offset(reqQuery.offset);
 
-    this.applyFilters(query, reqQuery, targetName);
+    const ids = await idQuery.getMany();
+    const thesisIds = ids.map((row) => row[`${targetName}_id`]);
+    const thesisQuery = this.createQueryBuilder(targetName)
+      .leftJoinAndSelect(`${targetName}.keyword`, 'keyword')
+      .whereInIds(thesisIds);
+
+    this.applyFilters(thesisQuery, reqQuery, targetName);
 
     const sortField = [
       { name: 'category', alias: `${targetName}.category` },
