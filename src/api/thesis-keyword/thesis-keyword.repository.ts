@@ -47,7 +47,7 @@ export class ThesisKeywordRepository extends Repository<ThesisKeywordsEntity> {
 
     query.limit(reqQuery.limit).offset(reqQuery.offset);
 
-    const [data, total] = await query.getManyAndCount();
+    const [data, total] = await thesisQuery.getManyAndCount();
 
     const pagination = plainToInstance(
       OffsetPaginationDto,
