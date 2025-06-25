@@ -19,70 +19,54 @@ export class ThesisKeywordRepository extends Repository<ThesisKeywordsEntity> {
   async Pagination(
     reqQuery: ThesisKeywordReqQuery,
   ): Promise<OffsetPaginatedDto<IThesisKeyword>> {
-    try {
-      const targetName = this.repo.metadata.targetName;
+    const targetName = this.repo.metadata.targetName;
 
-      const countQuery = this.createQueryBuilder(targetName).leftJoin(
-        `${targetName}.keyword`,
-        'keyword',
-      );
+    const idQuery = this.createQueryBuilder(targetName)
+      .select([`${targetName}.id`, `${targetName}.createdAt`])
+      .leftJoin(`${targetName}.keyword`, 'keyword')
+      .distinct(true);
 
-      this.applyFilters(countQuery, reqQuery, targetName);
-      const total = await countQuery.getCount();
+    this.applyFilters(idQuery, reqQuery, targetName);
 
-      const idQuery = this.createQueryBuilder(targetName)
-        .select(`${targetName}.id`)
-        .leftJoin(`${targetName}.keyword`, 'keyword');
+    const sortField = [
+      { name: 'category', alias: `${targetName}.category` },
+      { name: 'name', alias: `keyword.name` },
+      { name: 'created_at', alias: `${targetName}.createdAt` },
+    ].find((sort) => sort.name === reqQuery.sort);
 
-      this.applyFilters(idQuery, reqQuery, targetName);
-
-      const sortField = [
-        { name: 'category', alias: `${targetName}.category` },
-        { name: 'name', alias: `keyword.name` },
-        { name: 'created_at', alias: `${targetName}.createdAt` },
-      ].find((sort) => sort.name === reqQuery.sort);
-
-      if (sortField) {
-        idQuery.orderBy(sortField.alias, toOrderEnum(reqQuery.order));
-      } else {
-        idQuery.orderBy(`${targetName}.createdAt`, toOrderEnum(reqQuery.order));
-      }
-
-      idQuery.limit(reqQuery.limit).offset(reqQuery.offset);
-
-      const ids = await idQuery.getMany();
-
-      const thesisIds = ids.map((row) => row.id);
-
-      const thesisQuery = this.createQueryBuilder(targetName)
-        .leftJoinAndSelect(`${targetName}.keyword`, 'keyword')
-        .whereInIds(thesisIds);
-
-      if (sortField) {
-        thesisQuery.orderBy(sortField.alias, toOrderEnum(reqQuery.order));
-      } else {
-        thesisQuery.orderBy(
-          `${targetName}.createdAt`,
-          toOrderEnum(reqQuery.order),
-        );
-      }
-
-      const data = await thesisQuery.getMany();
-
-      const pagination = plainToInstance(
-        OffsetPaginationDto,
-        new OffsetPaginationDto(total, reqQuery),
-        { excludeExtraneousValues: true },
-      );
-
-      return {
-        data,
-        pagination: pagination,
-      };
-    } catch (error) {
-      console.error('Pagination error:', error);
-      throw new Error(`Failed to paginate thesis keywords: ${error.message}`);
+    if (sortField) {
+      idQuery.orderBy(sortField.alias, toOrderEnum(reqQuery.order));
+    } else {
+      idQuery.orderBy(`${targetName}.createdAt`, toOrderEnum(reqQuery.order));
     }
+
+    idQuery.limit(reqQuery.limit).offset(reqQuery.offset);
+
+    const ids = await idQuery.getRawMany();
+    const thesisIds = ids.map((row) => row[`${targetName}_id`]);
+
+    const thesisQuery = this.createQueryBuilder(targetName)
+      .leftJoinAndSelect(`${targetName}.keyword`, 'keyword')
+      .whereInIds(thesisIds);
+
+    if (sortField) {
+      thesisQuery.orderBy(sortField.alias, toOrderEnum(reqQuery.order));
+    } else {
+      thesisQuery.orderBy(
+        `${targetName}.createdAt`,
+        toOrderEnum(reqQuery.order),
+      );
+    }
+
+    const [data, total] = await thesisQuery.getManyAndCount();
+
+    const pagination = plainToInstance(
+      OffsetPaginationDto,
+      new OffsetPaginationDto(total, reqQuery),
+      { excludeExtraneousValues: true },
+    );
+
+    return { data, pagination };
   }
 
   private applyFilters(

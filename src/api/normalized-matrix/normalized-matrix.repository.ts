@@ -20,11 +20,32 @@ export class NormalizedMatrixRepository extends Repository<NormalizedMatricesEnt
     reqQuery: RecommendationPaginationReqQuery,
   ): Promise<OffsetPaginatedDto<INormalizedMatrices>> {
     const targetName = this.repo.metadata.targetName;
-    const query = this.createQueryBuilder(targetName)
+    const lecturerIdsQuery = this.createQueryBuilder(targetName)
+      .select(`${targetName}.lecturerId`, 'lecturerId')
+      .groupBy(`${targetName}.lecturerId`)
+      .limit(reqQuery.limit)
+      .offset(reqQuery.offset);
+
+    const lecturerIdsRaw = await lecturerIdsQuery.getRawMany();
+    const lecturerIds = lecturerIdsRaw.map((row) => row.lecturerId);
+
+    if (lecturerIds.length === 0) {
+      const pagination = plainToInstance(
+        OffsetPaginationDto,
+        new OffsetPaginationDto(0, reqQuery),
+        { excludeExtraneousValues: true },
+      );
+      return { data: [], pagination };
+    }
+
+    const query = this.repo
+      .createQueryBuilder(targetName)
       .leftJoinAndSelect(`${targetName}.lecturer`, 'lecturer')
-      .leftJoinAndSelect(`${targetName}.criteria`, 'criteria');
+      .leftJoinAndSelect(`${targetName}.criteria`, 'criteria')
+      .where(`${targetName}.lecturerId IN (:...lecturerIds)`, { lecturerIds });
 
     this.applyFilters(query, reqQuery);
+    const data = await query.getMany();
 
     const sortField = [
       { name: 'full_name', alias: `${targetName}.full_name` },
@@ -36,9 +57,7 @@ export class NormalizedMatrixRepository extends Repository<NormalizedMatricesEnt
       query.orderBy(`${targetName}.createdAt`, toOrderEnum(reqQuery.order));
     }
 
-    query.limit(reqQuery.limit).offset(reqQuery.offset);
-
-    const [data, total] = await query.getManyAndCount();
+    const total = lecturerIdsRaw.length;
 
     const pagination = plainToInstance(
       OffsetPaginationDto,
