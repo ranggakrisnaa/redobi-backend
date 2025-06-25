@@ -40,12 +40,15 @@ export class ThesisKeywordRepository extends Repository<ThesisKeywordsEntity> {
     ].find((sort) => sort.name === reqQuery.sort);
 
     if (sortField) {
-      query.orderBy(sortField.alias, toOrderEnum(reqQuery.order));
+      thesisQuery.orderBy(sortField.alias, toOrderEnum(reqQuery.order));
     } else {
-      query.orderBy(`${targetName}.createdAt`, toOrderEnum(reqQuery.order));
+      thesisQuery.orderBy(
+        `${targetName}.createdAt`,
+        toOrderEnum(reqQuery.order),
+      );
     }
 
-    query.limit(reqQuery.limit).offset(reqQuery.offset);
+    thesisQuery.limit(reqQuery.limit).offset(reqQuery.offset);
 
     const [data, total] = await thesisQuery.getManyAndCount();
 
