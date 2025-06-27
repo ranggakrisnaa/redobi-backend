@@ -31,7 +31,9 @@ import { DeleteRecommendationDto } from './dto/delete.dto';
 import { RecommendationPaginationReqQuery } from './dto/query.dto';
 import { UpdateRecommendationDto } from './dto/update.dto';
 import { RecommendationRepository } from './recommendation.repository';
+
 const PDFDocument = require('pdfkit');
+
 @Injectable()
 export class RecommendationService {
   constructor(
@@ -438,12 +440,20 @@ export class RecommendationService {
         this.studentRepository.find(),
       ]);
 
+      console.log(`=== THESIS RANKING PROCESS STARTED ===`);
+      console.log(`Total students to process: ${foundAllStudents.length}`);
+
       const studentMapWithThesisValue = new Map<
         string,
         { studentId: string; major: string; value: number }
       >();
 
+      // Enhanced logging for thesis keyword matching
       for (const student of foundAllStudents) {
+        console.log(`\n--- Processing Student: ${student.id} ---`);
+        console.log(`Student Major: ${student.major}`);
+        console.log(`Thesis Title: "${student.judulSkripsi}"`);
+
         const foundThesisKeyword = await this.thesisKeywordRepository.findOne({
           where: {
             category: student.major as unknown as ThesisKeywordCategoryEnum,
@@ -451,13 +461,41 @@ export class RecommendationService {
           relations: ['keyword'],
         });
 
+        if (!foundThesisKeyword) {
+          console.log(
+            `⚠️  No thesis keywords found for major: ${student.major}`,
+          );
+          studentMapWithThesisValue.set(student.id, {
+            studentId: student.id,
+            major: student.major,
+            value: 0,
+          });
+          continue;
+        }
+
+        console.log(
+          `Available keywords for ${student.major}:`,
+          foundThesisKeyword.keyword.map((k) => k.name).join(', '),
+        );
+
         const keywordArray = student.judulSkripsi.toLowerCase().split(' ');
+        console.log(`Thesis title words:`, keywordArray);
+
         const matchedKeywords = keywordArray.filter((word) =>
           foundThesisKeyword?.keyword.some(
             (k) => k.name.toLowerCase() === word,
           ),
         );
+
+        console.log(
+          `Matched keywords:`,
+          matchedKeywords.length > 0 ? matchedKeywords : 'None',
+        );
+
         const value = matchedKeywords.length * 10;
+        console.log(
+          `Calculated score: ${value} (${matchedKeywords.length} matches × 10)`,
+        );
 
         studentMapWithThesisValue.set(student.id, {
           studentId: student.id,
@@ -466,6 +504,8 @@ export class RecommendationService {
         });
       }
 
+      // Enhanced logging for ranking calculation
+      console.log(`\n=== RANKING CALCULATION ===`);
       const ranking = Array.from(studentMapWithThesisValue.entries())
         .sort((a, b) => b[1].value - a[1].value)
         .map(([studentId, value], index) => ({
@@ -475,11 +515,63 @@ export class RecommendationService {
           rank: index + 1,
         }));
 
+      console.log(`\n--- OVERALL RANKING RESULTS ---`);
+      ranking.forEach((student, index) => {
+        const studentInfo = foundAllStudents.find(
+          (s) => s.id === student.studentId,
+        );
+        console.log(
+          `Rank ${student.rank}: Student ${student.studentId} (${student.major}) - Score: ${student.value}`,
+        );
+        if (studentInfo) {
+          console.log(`  Title: "${studentInfo.judulSkripsi}"`);
+        }
+      });
+
       const majors = [
         ThesisKeywordCategoryEnum.REKAYASA_PERANGKAT_LUNAK,
         ThesisKeywordCategoryEnum.SISTEM_CERDAS,
         ThesisKeywordCategoryEnum.MULTIMEDIA,
       ];
+
+      // Log ranking by major
+      console.log(`\n=== RANKING BY MAJOR ===`);
+      majors.forEach((major) => {
+        const majorRanking = ranking.filter((r) => r.major === major);
+        console.log(`\n--- ${major} Ranking ---`);
+        if (majorRanking.length === 0) {
+          console.log(`No students found for major: ${major}`);
+          return;
+        }
+
+        majorRanking.forEach((student, index) => {
+          const studentInfo = foundAllStudents.find(
+            (s) => s.id === student.studentId,
+          );
+          console.log(
+            `  ${index + 1}. Student ${student.studentId} - Score: ${student.value}`,
+          );
+          if (studentInfo) {
+            console.log(`     Title: "${studentInfo.judulSkripsi}"`);
+          }
+        });
+
+        // Statistics for this major
+        const scores = majorRanking.map((s) => s.value);
+        const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
+        const maxScore = Math.max(...scores);
+        const minScore = Math.min(...scores);
+        const zeroScoreCount = scores.filter((s) => s === 0).length;
+
+        console.log(`  Statistics:`);
+        console.log(`    - Total students: ${majorRanking.length}`);
+        console.log(`    - Average score: ${avgScore.toFixed(2)}`);
+        console.log(`    - Highest score: ${maxScore}`);
+        console.log(`    - Lowest score: ${minScore}`);
+        console.log(
+          `    - Students with zero score: ${zeroScoreCount} (${((zeroScoreCount / majorRanking.length) * 100).toFixed(1)}%)`,
+        );
+      });
 
       await this.recommendationRepository.delete({});
 
@@ -696,12 +788,14 @@ export class RecommendationService {
         );
       }
 
+      console.log(`\n=== THESIS RANKING PROCESS COMPLETED ===`);
+
       return {
         message:
           'Recommendation created successfully for all majors with strict quota enforcement.',
       };
     } catch (err: unknown) {
-      console.error(err);
+      console.error('Error in CreateRecommendation:', err);
       if (err instanceof InternalServerErrorException)
         throw new InternalServerErrorException(
           err instanceof Error ? err.message : 'Unexpected error',
@@ -931,6 +1025,7 @@ export class RecommendationService {
       throw new InternalServerErrorException('Unexpected error');
     }
   }
+
   async DeleteRankingMatrix(
     rankingMatrixId?: string,
     req?: DeleteRankingMatrix,
