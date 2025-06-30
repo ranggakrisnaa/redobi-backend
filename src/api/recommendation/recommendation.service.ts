@@ -31,7 +31,9 @@ import { DeleteRecommendationDto } from './dto/delete.dto';
 import { RecommendationPaginationReqQuery } from './dto/query.dto';
 import { UpdateRecommendationDto } from './dto/update.dto';
 import { RecommendationRepository } from './recommendation.repository';
+
 const PDFDocument = require('pdfkit');
+
 @Injectable()
 export class RecommendationService {
   constructor(
@@ -245,7 +247,6 @@ export class RecommendationService {
             normalizedScore = score > 0 ? refValue / score : 0;
           }
 
-          normalizedScore = roundToThreeDecimals(normalizedScore);
           normalizedMatrix.get(lecturerId).set(subId, normalizedScore);
         }
       }
@@ -257,9 +258,8 @@ export class RecommendationService {
 
         for (const [subId, normalizedScore] of normalizedScores.entries()) {
           const info = subCriteriaInfo.get(subId);
-          const weightedScore = roundToThreeDecimals(
-            normalizedScore * info.weight,
-          );
+          const weightedScore = normalizedScore * info.weight;
+
           weightedMatrix.get(lecturerId).set(subId, weightedScore);
         }
       }
@@ -300,7 +300,7 @@ export class RecommendationService {
 
           const currentTotal =
             criteriaAggregated.get(lecturerId).get(criteriaId) || 0;
-          const newTotal = roundToThreeDecimals(currentTotal + weightedScore);
+          const newTotal = currentTotal + weightedScore;
           criteriaAggregated.get(lecturerId).set(criteriaId, newTotal);
         }
       }
@@ -323,7 +323,6 @@ export class RecommendationService {
         );
       }
 
-      // Step 8: Calculate final total scores
       const finalTotalScores: Record<string, number> = {};
 
       for (const [lecturerId, criteriaScores] of criteriaAggregated.entries()) {
@@ -483,7 +482,6 @@ export class RecommendationService {
 
       await this.recommendationRepository.delete({});
 
-      // Global lecturer tracking across all majors
       const globalLecturerAssignments = new Map<string, number>();
 
       for (const major of majors) {
@@ -507,7 +505,6 @@ export class RecommendationService {
           lecturerRankingMap.set(ranking.lecturer.id, ranking.finalScore || 0);
         });
 
-        // Sort lecturers by ranking score (highest first)
         pembimbing1Lecturers.sort(
           (a, b) =>
             (lecturerRankingMap.get(b.id) || 0) -
@@ -519,7 +516,6 @@ export class RecommendationService {
             (lecturerRankingMap.get(a.id) || 0),
         );
 
-        // Initialize lecturer assignments if not exists
         [...pembimbing1Lecturers, ...pembimbing2Lecturers].forEach(
           (lecturer) => {
             if (!globalLecturerAssignments.has(lecturer.id)) {
@@ -528,7 +524,6 @@ export class RecommendationService {
           },
         );
 
-        // Helper function to check if lecturer has available quota
         const hasAvailableQuota = (lecturer: any) => {
           const currentAssignments =
             globalLecturerAssignments.get(lecturer.id) || 0;
@@ -536,12 +531,10 @@ export class RecommendationService {
           return totalLoad < lecturer.kuotaBimbingan;
         };
 
-        // Helper function to get available lecturers with quota
         const getAvailableLecturers = (lecturers: any[]) => {
           return lecturers.filter((lecturer) => hasAvailableQuota(lecturer));
         };
 
-        // Helper function to get least loaded lecturer from available ones
         const getLeastLoadedFromAvailable = (lecturers: any[]) => {
           const available = getAvailableLecturers(lecturers);
           if (available.length === 0) return null;
@@ -558,14 +551,12 @@ export class RecommendationService {
               return prevLoad < currLoad ? prev : curr;
             }
 
-            // If load is equal, choose the one with higher ranking score
             const prevScore = lecturerRankingMap.get(prev.id) || 0;
             const currScore = lecturerRankingMap.get(curr.id) || 0;
             return prevScore >= currScore ? prev : curr;
           });
         };
 
-        // Assign pembimbing 1 with strict quota enforcement
         let assignedPembimbing1 = 0;
         let skippedPembimbing1 = 0;
 
@@ -645,14 +636,12 @@ export class RecommendationService {
         );
       }
 
-      // Update actual student count for all lecturers and verify quota compliance
       const lecturerIds = foundAllRankings.map((r) => r.lecturer.id);
       for (const lecturerId of lecturerIds) {
         const actualStudentCount = await this.recommendationRepository.count({
           where: { lecturerId },
         });
 
-        // Find lecturer info for quota verification
         const lecturer = foundAllRankings.find(
           (r) => r.lecturer.id === lecturerId,
         )?.lecturer;
@@ -661,10 +650,9 @@ export class RecommendationService {
             `QUOTA VIOLATION: Lecturer ${lecturer.id} has ${actualStudentCount} assignments but quota is ${lecturer.kuotaBimbingan}`,
           );
 
-          // Emergency cleanup - remove excess assignments
           const recommendations = await this.recommendationRepository.find({
             where: { lecturerId },
-            order: { id: 'DESC' }, // Remove latest assignments first
+            order: { id: 'DESC' },
           });
 
           const excessCount = actualStudentCount - lecturer.kuotaBimbingan;
@@ -677,7 +665,6 @@ export class RecommendationService {
             }
           }
 
-          // Recalculate actual count after cleanup
           const finalCount = await this.recommendationRepository.count({
             where: { lecturerId },
           });
@@ -931,6 +918,7 @@ export class RecommendationService {
       throw new InternalServerErrorException('Unexpected error');
     }
   }
+
   async DeleteRankingMatrix(
     rankingMatrixId?: string,
     req?: DeleteRankingMatrix,

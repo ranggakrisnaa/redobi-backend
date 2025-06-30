@@ -123,6 +123,7 @@ export class AssessmentService {
       await queryRunner.release();
     }
   }
+
   async Update(
     req: UpdateAssessmentDto,
     assessmentId: string,
@@ -137,7 +138,6 @@ export class AssessmentService {
     }
 
     try {
-      // Create a map of existing assessment sub criteria by ID for faster lookup
       const existingAssessmentSubMap = new Map();
       foundAssessment.assessmentSubCriteria.forEach((assSub) => {
         existingAssessmentSubMap.set(assSub.id, assSub);
@@ -157,11 +157,9 @@ export class AssessmentService {
         })),
       );
 
-      // Process each score update
       for (const score of req.scores) {
         const assessmentSubId = Number(score.assessmentSubCriteriaId);
 
-        // Check if the assessment sub criteria exists (only check by ID, not subCriteriaId)
         if (existingAssessmentSubMap.has(assessmentSubId)) {
           console.log(`Updating assessment sub criteria ${assessmentSubId}:`, {
             newSubCriteriaId: score.subCriteriaId,
@@ -179,7 +177,6 @@ export class AssessmentService {
             success: updateResult.affected > 0,
           });
 
-          // Verify the update
           const verifyRecord =
             await this.assessmentSubCriteriaRepository.findOne({
               where: { id: assessmentSubId },
@@ -195,7 +192,6 @@ export class AssessmentService {
         }
       }
 
-      // Fetch the updated assessment
       const updatedAssessment = await this.assessmentRepository.findOne({
         where: { id: assessmentId as Uuid },
         relations: [
