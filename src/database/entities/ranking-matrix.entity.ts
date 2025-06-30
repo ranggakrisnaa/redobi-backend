@@ -30,8 +30,8 @@ export class RankingMatricesEntity
   @Column({
     type: 'decimal',
     name: 'final_score',
-    precision: 5,
-    scale: 2,
+    precision: 10,
+    scale: 3,
     transformer: {
       to: (value: number) => value,
       from: (value: string) => parseFloat(value),

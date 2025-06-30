@@ -87,15 +87,25 @@ export class NormalizedMatrixRepository extends Repository<NormalizedMatricesEnt
 
   async findAllNormalizedMatrixWithSumTotalValue() {
     const targetName = this.repo.metadata.targetName;
+
     const query = this.createQueryBuilder(targetName)
       .select(`${targetName}.lecturerId`, 'lecturerId')
-      .addSelect(`SUM(${targetName}.normalizedValue)`, 'finalScore')
+      .addSelect(
+        `CAST(SUM(${targetName}.normalizedValue) AS DECIMAL(18,3))`,
+        'finalScore',
+      )
       .leftJoin(
         'criteria',
         'criteria',
         `criteria.id = ${targetName}.criteriaId`,
       )
       .groupBy(`${targetName}.lecturerId`);
-    return await query.getRawMany();
+
+    const result = await query.getRawMany();
+
+    return result.map((row) => ({
+      lecturerId: row.lecturerId,
+      finalScore: Math.round(parseFloat(row.finalScore) * 1000) / 1000,
+    }));
   }
 }
