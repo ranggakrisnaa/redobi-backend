@@ -630,6 +630,13 @@ export class RecommendationService {
           if (available.length === 0) return null;
 
           return available.reduce((prev, curr) => {
+            const prevScore = lecturerRankingMap.get(prev.id) || 0;
+            const currScore = lecturerRankingMap.get(curr.id) || 0;
+
+            if (currScore !== prevScore) {
+              return currScore > prevScore ? curr : prev;
+            }
+
             const prevLoad =
               prev.jumlahBimbingan +
               (globalLecturerAssignments.get(prev.id) || 0);
@@ -637,13 +644,7 @@ export class RecommendationService {
               curr.jumlahBimbingan +
               (globalLecturerAssignments.get(curr.id) || 0);
 
-            if (prevLoad !== currLoad) {
-              return prevLoad < currLoad ? prev : curr;
-            }
-
-            const prevScore = lecturerRankingMap.get(prev.id) || 0;
-            const currScore = lecturerRankingMap.get(curr.id) || 0;
-            return prevScore >= currScore ? prev : curr;
+            return currLoad < prevLoad ? curr : prev;
           });
         };
 
