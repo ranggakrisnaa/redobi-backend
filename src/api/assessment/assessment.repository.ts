@@ -21,16 +21,44 @@ export class AssessmentRepository extends Repository<AssessmentEntity> {
     reqQuery: AssessmentPaginationReqQuery,
   ): Promise<OffsetPaginatedDto<IAssessment>> {
     const targetName = this.repo.metadata.targetName;
+
+    const countQuery = this.createQueryBuilder(targetName).leftJoin(
+      `${targetName}.lecturer`,
+      'lecturer',
+    );
+    this.applyFilters(countQuery, reqQuery, targetName);
+    const total = await countQuery.getCount();
+
     const idQuery = this.createQueryBuilder(targetName)
       .select(`${targetName}.id`)
       .leftJoin(`${targetName}.lecturer`, 'lecturer');
 
     this.applyFilters(idQuery, reqQuery, targetName);
 
+    const sortField = [
+      { name: 'lecturerName', alias: `lecturer.full_name` },
+      { name: 'created_at', alias: `${targetName}.createdAt` },
+    ].find((sort) => sort.name === reqQuery.sort);
+
+    if (sortField) {
+      idQuery.orderBy(sortField.alias, reqQuery.order as OrderDirectionEnum);
+    } else {
+      idQuery.orderBy(`${targetName}.createdAt`, OrderDirectionEnum.Asc);
+    }
+
     idQuery.limit(reqQuery.limit).offset(reqQuery.offset);
 
     const ids = await idQuery.getRawMany();
     const assessmentIds = ids.map((row) => row[`${targetName}_id`]);
+
+    if (assessmentIds.length === 0) {
+      const pagination = plainToInstance(
+        OffsetPaginationDto,
+        new OffsetPaginationDto(total, reqQuery),
+        { excludeExtraneousValues: true },
+      );
+      return { data: [], pagination };
+    }
 
     const assessmentQuery = this.createQueryBuilder(targetName)
       .leftJoinAndSelect(`${targetName}.lecturer`, 'lecturer')
@@ -42,17 +70,19 @@ export class AssessmentRepository extends Repository<AssessmentEntity> {
       .leftJoinAndSelect('subCriteria.criteria', 'criteria')
       .whereInIds(assessmentIds);
 
-    const sortField = [
-      { name: 'lecturerName', alias: `lecturer.full_name` },
-      { name: 'created_at', alias: `${targetName}.createdAt` },
-    ].find((sort) => sort.name === reqQuery.sort);
     if (sortField) {
-      idQuery.orderBy(sortField.alias, reqQuery.order as OrderDirectionEnum);
+      assessmentQuery.orderBy(
+        sortField.alias,
+        reqQuery.order as OrderDirectionEnum,
+      );
     } else {
-      idQuery.orderBy(`${targetName}.createdAt`, OrderDirectionEnum.Asc);
+      assessmentQuery.orderBy(
+        `${targetName}.createdAt`,
+        OrderDirectionEnum.Asc,
+      );
     }
 
-    const [data, total] = await assessmentQuery.getManyAndCount();
+    const data = await assessmentQuery.getMany();
 
     const pagination = plainToInstance(
       OffsetPaginationDto,

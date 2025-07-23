@@ -20,19 +20,13 @@ export class NormalizedMatrixRepository extends Repository<NormalizedMatricesEnt
     reqQuery: RecommendationPaginationReqQuery,
   ): Promise<OffsetPaginatedDto<INormalizedMatrices>> {
     const targetName = this.repo.metadata.targetName;
-
-    const sortField = [
-      { name: 'full_name', alias: `lecturer.full_name` },
-      { name: 'created_at', alias: `${targetName}.createdAt` },
-    ].find((sort) => sort.name === reqQuery.sort);
-    const orderByField = sortField?.alias || `${targetName}.createdAt`;
     const order = toOrderEnum(reqQuery.order);
 
     const countQuery = this.repo
       .createQueryBuilder(targetName)
+      .select(`${targetName}.lecturerId`)
       .leftJoin(`${targetName}.lecturer`, 'lecturer')
       .leftJoin(`${targetName}.criteria`, 'criteria')
-      .select(`${targetName}.lecturerId`)
       .groupBy(`${targetName}.lecturerId`);
     this.applyFilters(countQuery, reqQuery);
     const totalLecturerIds = await countQuery.getRawMany();
@@ -40,13 +34,20 @@ export class NormalizedMatrixRepository extends Repository<NormalizedMatricesEnt
 
     const pagedQuery = this.repo
       .createQueryBuilder(targetName)
+      .select(`${targetName}.lecturerId`, 'lecturerId')
+      .addSelect(`MAX(${targetName}.createdAt)`, 'latestCreatedAt')
       .leftJoin(`${targetName}.lecturer`, 'lecturer')
       .leftJoin(`${targetName}.criteria`, 'criteria')
-      .select(`${targetName}.lecturerId`, 'lecturerId')
       .groupBy(`${targetName}.lecturerId`)
-      .orderBy(orderByField, order)
+      .orderBy(
+        reqQuery.sort === 'full_name'
+          ? 'lecturer.full_name'
+          : `MAX(${targetName}.createdAt)`,
+        order,
+      )
       .limit(reqQuery.limit)
       .offset(reqQuery.offset);
+
     this.applyFilters(pagedQuery, reqQuery);
     const pagedLecturerIdsRaw = await pagedQuery.getRawMany();
     const pagedLecturerIds = pagedLecturerIdsRaw.map((row) => row.lecturerId);
@@ -67,7 +68,12 @@ export class NormalizedMatrixRepository extends Repository<NormalizedMatricesEnt
       .where(`${targetName}.lecturerId IN (:...lecturerIds)`, {
         lecturerIds: pagedLecturerIds,
       })
-      .orderBy(orderByField, order);
+      .orderBy(
+        reqQuery.sort === 'full_name'
+          ? 'lecturer.full_name'
+          : `${targetName}.createdAt`,
+        order,
+      );
 
     this.applyFilters(baseQuery, reqQuery);
 
