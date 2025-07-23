@@ -20,14 +20,33 @@ export class NormalizedMatrixRepository extends Repository<NormalizedMatricesEnt
     reqQuery: RecommendationPaginationReqQuery,
   ): Promise<OffsetPaginatedDto<INormalizedMatrices>> {
     const targetName = this.repo.metadata.targetName;
-    const lecturerIdsQuery = this.createQueryBuilder(targetName)
-      .select(`${targetName}.lecturerId`, 'lecturerId')
-      .groupBy(`${targetName}.lecturerId`)
-      .limit(reqQuery.limit)
-      .offset(reqQuery.offset);
 
-    const lecturerIdsRaw = await lecturerIdsQuery.getRawMany();
+    const baseQuery = this.repo
+      .createQueryBuilder(targetName)
+      .leftJoinAndSelect(`${targetName}.lecturer`, 'lecturer')
+      .leftJoinAndSelect(`${targetName}.criteria`, 'criteria');
+
+    this.applyFilters(baseQuery, reqQuery);
+
+    const sortField = [
+      { name: 'full_name', alias: `lecturer.full_name` },
+      { name: 'created_at', alias: `${targetName}.createdAt` },
+    ].find((sort) => sort.name === reqQuery.sort);
+    if (sortField) {
+      baseQuery.orderBy(sortField.alias, toOrderEnum(reqQuery.order));
+    } else {
+      baseQuery.orderBy(`${targetName}.createdAt`, toOrderEnum(reqQuery.order));
+    }
+
+    const subQuery = this.repo
+      .createQueryBuilder(targetName)
+      .select(`${targetName}.lecturerId`, 'lecturerId')
+      .groupBy(`${targetName}.lecturerId`);
+
+    this.applyFilters(subQuery, reqQuery);
+    const lecturerIdsRaw = await subQuery.getRawMany();
     const lecturerIds = lecturerIdsRaw.map((row) => row.lecturerId);
+    const total = lecturerIds.length;
 
     if (lecturerIds.length === 0) {
       const pagination = plainToInstance(
@@ -38,26 +57,16 @@ export class NormalizedMatrixRepository extends Repository<NormalizedMatricesEnt
       return { data: [], pagination };
     }
 
-    const query = this.repo
-      .createQueryBuilder(targetName)
-      .leftJoinAndSelect(`${targetName}.lecturer`, 'lecturer')
-      .leftJoinAndSelect(`${targetName}.criteria`, 'criteria')
-      .where(`${targetName}.lecturerId IN (:...lecturerIds)`, { lecturerIds });
+    const pagedLecturerIds = lecturerIds.slice(
+      reqQuery.offset,
+      reqQuery.offset + reqQuery.limit,
+    );
 
-    this.applyFilters(query, reqQuery);
-    const data = await query.getMany();
+    baseQuery.andWhere(`${targetName}.lecturerId IN (:...lecturerIds)`, {
+      lecturerIds: pagedLecturerIds,
+    });
 
-    const sortField = [
-      { name: 'full_name', alias: `${targetName}.full_name` },
-      { name: 'created_at', alias: `${targetName}.createdAt` },
-    ].find((sort) => sort.name === reqQuery.sort);
-    if (sortField) {
-      query.orderBy(sortField.alias, toOrderEnum(reqQuery.order));
-    } else {
-      query.orderBy(`${targetName}.createdAt`, toOrderEnum(reqQuery.order));
-    }
-
-    const total = lecturerIdsRaw.length;
+    const data = await baseQuery.getMany();
 
     const pagination = plainToInstance(
       OffsetPaginationDto,
