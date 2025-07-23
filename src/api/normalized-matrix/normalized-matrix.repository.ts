@@ -21,50 +21,51 @@ export class NormalizedMatrixRepository extends Repository<NormalizedMatricesEnt
   ): Promise<OffsetPaginatedDto<INormalizedMatrices>> {
     const targetName = this.repo.metadata.targetName;
 
-    const baseQuery = this.repo
-      .createQueryBuilder(targetName)
-      .leftJoinAndSelect(`${targetName}.lecturer`, 'lecturer')
-      .leftJoinAndSelect(`${targetName}.criteria`, 'criteria');
-
-    this.applyFilters(baseQuery, reqQuery);
-
     const sortField = [
       { name: 'full_name', alias: `lecturer.full_name` },
       { name: 'created_at', alias: `${targetName}.createdAt` },
     ].find((sort) => sort.name === reqQuery.sort);
-    if (sortField) {
-      baseQuery.orderBy(sortField.alias, toOrderEnum(reqQuery.order));
-    } else {
-      baseQuery.orderBy(`${targetName}.createdAt`, toOrderEnum(reqQuery.order));
-    }
+    const orderByField = sortField?.alias || `${targetName}.createdAt`;
+    const order = toOrderEnum(reqQuery.order);
 
-    const subQuery = this.repo
+    const countQuery = this.repo
+      .createQueryBuilder(targetName)
+      .select(`${targetName}.lecturerId`)
+      .groupBy(`${targetName}.lecturerId`);
+    this.applyFilters(countQuery, reqQuery);
+    const totalLecturerIds = await countQuery.getRawMany();
+    const total = totalLecturerIds.length;
+
+    const pagedQuery = this.repo
       .createQueryBuilder(targetName)
       .select(`${targetName}.lecturerId`, 'lecturerId')
-      .groupBy(`${targetName}.lecturerId`);
+      .groupBy(`${targetName}.lecturerId`)
+      .orderBy(orderByField, order)
+      .limit(reqQuery.limit)
+      .offset(reqQuery.offset);
+    this.applyFilters(pagedQuery, reqQuery);
+    const pagedLecturerIdsRaw = await pagedQuery.getRawMany();
+    const pagedLecturerIds = pagedLecturerIdsRaw.map((row) => row.lecturerId);
 
-    this.applyFilters(subQuery, reqQuery);
-    const lecturerIdsRaw = await subQuery.getRawMany();
-    const lecturerIds = lecturerIdsRaw.map((row) => row.lecturerId);
-    const total = lecturerIds.length;
-
-    if (lecturerIds.length === 0) {
+    if (pagedLecturerIds.length === 0) {
       const pagination = plainToInstance(
         OffsetPaginationDto,
-        new OffsetPaginationDto(0, reqQuery),
+        new OffsetPaginationDto(total, reqQuery),
         { excludeExtraneousValues: true },
       );
       return { data: [], pagination };
     }
 
-    const pagedLecturerIds = lecturerIds.slice(
-      reqQuery.offset,
-      reqQuery.offset + reqQuery.limit,
-    );
+    const baseQuery = this.repo
+      .createQueryBuilder(targetName)
+      .leftJoinAndSelect(`${targetName}.lecturer`, 'lecturer')
+      .leftJoinAndSelect(`${targetName}.criteria`, 'criteria')
+      .where(`${targetName}.lecturerId IN (:...lecturerIds)`, {
+        lecturerIds: pagedLecturerIds,
+      })
+      .orderBy(orderByField, order);
 
-    baseQuery.andWhere(`${targetName}.lecturerId IN (:...lecturerIds)`, {
-      lecturerIds: pagedLecturerIds,
-    });
+    this.applyFilters(baseQuery, reqQuery);
 
     const data = await baseQuery.getMany();
 
