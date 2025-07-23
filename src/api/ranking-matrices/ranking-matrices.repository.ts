@@ -1,5 +1,6 @@
 import { OffsetPaginationDto } from '@/common/dto/offset-pagination/offset-pagination.dto';
 import { OffsetPaginatedDto } from '@/common/dto/offset-pagination/paginated.dto';
+import { OrderDirectionEnum } from '@/common/enums/sort.enum';
 import { RankingMatricesEntity } from '@/database/entities/ranking-matrix.entity';
 import { IRankingMatrices } from '@/database/interface-model/ranking-matrices-entity.interface';
 import { toOrderEnum } from '@/utils/util';
@@ -35,7 +36,7 @@ export class RankingMatricesRepository extends Repository<RankingMatricesEntity>
     if (sortField) {
       query.orderBy(sortField.alias, toOrderEnum(reqQuery.order));
     } else {
-      query.orderBy(`${targetName}.createdAt`, toOrderEnum(reqQuery.order));
+      query.orderBy(`${targetName}.rank`, OrderDirectionEnum.Asc);
     }
 
     query.limit(reqQuery.limit).offset(reqQuery.offset);
