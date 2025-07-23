@@ -30,6 +30,8 @@ export class NormalizedMatrixRepository extends Repository<NormalizedMatricesEnt
 
     const countQuery = this.repo
       .createQueryBuilder(targetName)
+      .leftJoin(`${targetName}.lecturer`, 'lecturer')
+      .leftJoin(`${targetName}.criteria`, 'criteria')
       .select(`${targetName}.lecturerId`)
       .groupBy(`${targetName}.lecturerId`);
     this.applyFilters(countQuery, reqQuery);
@@ -38,6 +40,8 @@ export class NormalizedMatrixRepository extends Repository<NormalizedMatricesEnt
 
     const pagedQuery = this.repo
       .createQueryBuilder(targetName)
+      .leftJoin(`${targetName}.lecturer`, 'lecturer')
+      .leftJoin(`${targetName}.criteria`, 'criteria')
       .select(`${targetName}.lecturerId`, 'lecturerId')
       .groupBy(`${targetName}.lecturerId`)
       .orderBy(orderByField, order)
